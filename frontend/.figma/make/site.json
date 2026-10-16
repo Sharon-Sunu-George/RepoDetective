@@ -1,0 +1,10 @@
+{
+  "description": "Explore and understand real GitHub repositories through guided code investigations that reveal file structures, code connections, and contribution paths.",
+  "robots": {
+    "index": false
+  },
+  "accessibility": {
+    "addBypassLinks": false,
+    "ignoreReducedMotion": false
+  }
+}
