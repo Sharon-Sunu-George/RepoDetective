@@ -758,10 +758,19 @@ function Workspace({
   )
 }
 
-type Screen = "landing" | "intro" | "briefing" | "workspace"
+import { DetectiveDashboard } from "./DetectiveDashboard"
+
+type Screen = "landing" | "briefing" | "intro" | "dashboard" | "workspace"
 
 export default function App() {
-  const [screen, setScreen] = useState<Screen>("landing")
+  const initialScreen = () => {
+    if (typeof window !== "undefined") {
+      const p = new URLSearchParams(window.location.search).get("screen")
+      if (p === "dashboard" || p === "briefing" || p === "intro" || p === "workspace") return p as Screen
+    }
+    return "landing"
+  }
+  const [screen, setScreen] = useState<Screen>(initialScreen)
   const [requestedRepository, setRequestedRepository] = useState("https://github.com/vercel/ms")
   const [parsedRepo, setParsedRepo] = useState<{ owner: string; repo: string }>({
     owner: "vercel",
@@ -773,7 +782,8 @@ export default function App() {
     if (parsed) {
       setRequestedRepository(parsed.fullUrl)
       setParsedRepo({ owner: parsed.owner, repo: parsed.repo })
-      setScreen("intro")
+      // Page 2: Case Briefing Dossier
+      setScreen("briefing")
     }
   }
 
@@ -781,15 +791,62 @@ export default function App() {
     setScreen("landing")
   }
 
-  const handleEnterDashboard = (repoUrl: string) => {
-    setRequestedRepository(repoUrl)
-    setScreen("workspace")
+  const handleBeginLearning = () => {
+    // Cutscene office intro before entering main detective dashboard
+    setScreen("intro")
   }
 
-  if (screen === "workspace" || screen === "intro" || screen === "briefing") {
+  const handleEnterDashboard = (repoUrl?: string) => {
+    if (repoUrl) setRequestedRepository(repoUrl)
+    // Page 3: Pixel-Accurate Cyber Detective Dashboard
+    setScreen("dashboard")
+  }
+
+  // Screen 1: Landing Page
+  if (screen === "landing") {
+    return <Landing onStart={startInvestigation} />
+  }
+
+  // Screen 2: Case Briefing Dossier (What is this project, structure, field manual)
+  if (screen === "briefing") {
+    return (
+      <CaseBriefing
+        owner={parsedRepo.owner}
+        repo={parsedRepo.repo}
+        onBack={handleBackToHq}
+        onBeginLearning={handleBeginLearning}
+      />
+    )
+  }
+
+  // Transition Cutscene: Detective Office Intro with RPG dialogue
+  if (screen === "intro") {
+    return (
+      <DetectiveOfficeIntro
+        repoUrl={`${parsedRepo.owner}/${parsedRepo.repo}`}
+        onComplete={() => handleEnterDashboard()}
+        onBack={handleBackToHq}
+      />
+    )
+  }
+
+  // Screen 3: Pixel-Accurate RepoDetective Dashboard (Reference Screenshot Recreation)
+  if (screen === "dashboard") {
+    return (
+      <DetectiveDashboard
+        initialRepo={`${parsedRepo.owner}/${parsedRepo.repo}`}
+        onBackToLanding={handleBackToHq}
+        onOpenExplorer={() => setScreen("workspace")}
+        onOpenQuestions={() => setScreen("workspace")}
+      />
+    )
+  }
+
+  // Screen 4: Detailed Interactive Code Workspace & Map
+  if (screen === "workspace") {
     return (
       <Workspace
-        onExit={() => setScreen("landing")}
+        onExit={() => setScreen("dashboard")}
         requestedRepository={requestedRepository}
       />
     )
@@ -797,3 +854,4 @@ export default function App() {
 
   return <Landing onStart={startInvestigation} />
 }
+
