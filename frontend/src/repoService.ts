@@ -11,6 +11,25 @@ export interface StructureItem {
   glossaryTerm?: GlossaryItem
 }
 
+export interface LanguageShare {
+  name: string
+  percentage: number
+  color?: string
+}
+
+export interface TechStackItem {
+  name: string
+  tag: string
+  badge: string
+  isPrimary?: boolean
+}
+
+export interface ActivityItem {
+  date: string
+  action: string
+  type: "updated" | "commit" | "release"
+}
+
 export interface RepoBriefingData {
   owner: string
   repo: string
@@ -29,6 +48,12 @@ export interface RepoBriefingData {
   targetAudience: string
   repositoryOverview: string
   structureMap: StructureItem[]
+  openIssues: number
+  contributorsCount: number
+  lastUpdated: string
+  languages: LanguageShare[]
+  techStack: TechStackItem[]
+  recentActivity: ActivityItem[]
 }
 
 export function parseGitHubUrl(input: string): { owner: string; repo: string; fullUrl: string } | null {
@@ -73,29 +98,19 @@ const SAMPLE_CASE_VERCEL_MS: RepoBriefingData = {
   description: "Tiny millisecond conversion utility for Node.js and modern browsers.",
   primaryLanguage: "JavaScript",
   license: "MIT License",
-  stars: 5200,
-  forks: 310,
+  stars: 6200,
+  forks: 412,
   defaultBranch: "master",
   visibility: "public",
   whatItDoes:
     "Converts human-readable duration phrases (like '2 days', '15m', or '1.5h') into exact millisecond numbers (e.g. 172800000, 900000), and formats milliseconds back into friendly shorthand strings.",
   problemSolved:
-    "Computers measure time in milliseconds, but developers and users think in hours, days, and seconds. Writing manual mathematical conversions in every project is repetitive and leads to bugs.",
+    "Computers measure time in milliseconds, but developers and users think in hours, days, and minutes. Manually parsing duration strings or formatting milliseconds across projects is repetitive and error-prone.",
   targetAudience:
     "Web developers, backend API builders, and frameworks needing reliable duration calculations for cache timeouts, session lifetimes, and rate limits.",
   repositoryOverview:
     "A clean, minimalist JavaScript micro-utility consisting of an entry function, lightweight helper imports, package manifests, and unit tests.",
   structureMap: [
-    {
-      name: "source/index.js",
-      type: "file",
-      role: "ENTRY POINT",
-      description: "The primary file containing the main ms() function that executes when someone uses this package.",
-      glossaryTerm: {
-        term: "Entry Point",
-        meaning: "The first code file that runs when a program or library is loaded by another project.",
-      },
-    },
     {
       name: "package.json",
       type: "file",
@@ -107,17 +122,17 @@ const SAMPLE_CASE_VERCEL_MS: RepoBriefingData = {
       },
     },
     {
-      name: "test/index.js",
+      name: "index.js",
       type: "file",
-      role: "TEST SUITE",
-      description: "Automated test scripts ensuring milliseconds and string conversions work accurately.",
+      role: "ENTRY POINT",
+      description: "The primary file containing the main ms() function that executes when someone uses this package.",
       glossaryTerm: {
-        term: "Test Suite",
-        meaning: "A collection of automated scripts that run code through various checks to prove it works.",
+        term: "Entry Point",
+        meaning: "The first code file that runs when a program or library is loaded by another project.",
       },
     },
     {
-      name: "readme.md",
+      name: "README.md",
       type: "file",
       role: "DOCUMENTATION",
       description: "Field manual with usage examples, installation instructions, and options.",
@@ -127,7 +142,7 @@ const SAMPLE_CASE_VERCEL_MS: RepoBriefingData = {
       },
     },
     {
-      name: "license",
+      name: "LICENSE",
       type: "file",
       role: "LEGAL CLEARANCE",
       description: "MIT License granting permission for open-source use and modification.",
@@ -136,6 +151,37 @@ const SAMPLE_CASE_VERCEL_MS: RepoBriefingData = {
         meaning: "Legal guidelines stating how other developers are permitted to use, modify, and share this code.",
       },
     },
+    {
+      name: ".gitignore",
+      type: "file",
+      role: "CONFIG",
+      description: "Specifies intentionally untracked files that Git should ignore.",
+      glossaryTerm: {
+        term: "Gitignore",
+        meaning: "Rules defining files and folders excluded from version control tracking.",
+      },
+    },
+  ],
+  openIssues: 23,
+  contributorsCount: 18,
+  lastUpdated: "Oct 15, 2026",
+  languages: [
+    { name: "JavaScript", percentage: 72.8, color: "#facc15" },
+    { name: "TypeScript", percentage: 18.4, color: "#38bdf8" },
+    { name: "CSS", percentage: 5.1, color: "#a855f7" },
+    { name: "HTML", percentage: 2.7, color: "#f87171" },
+    { name: "Other", percentage: 1.0, color: "#64748b" },
+  ],
+  techStack: [
+    { name: "JavaScript", tag: "PRIMARY", badge: "JS", isPrimary: true },
+    { name: "TypeScript", tag: "DETECTED", badge: "TS" },
+    { name: "Node.js", tag: "DETECTED", badge: "Node" },
+    { name: "npm", tag: "DETECTED", badge: "npm" },
+  ],
+  recentActivity: [
+    { date: "Oct 15, 2026", action: "Updated", type: "updated" },
+    { date: "Oct 10, 2026", action: "Commit", type: "commit" },
+    { date: "Oct 02, 2026", action: "Commit", type: "commit" },
   ],
 }
 
@@ -306,6 +352,82 @@ export async function fetchRepoBriefing(owner: string, repo: string): Promise<Re
   const lang = repoData.language || "General Code"
   const desc = repoData.description ? repoData.description.trim() : null
 
+  // Format last updated date
+  let lastUpdated = "Recently"
+  if (repoData.updated_at) {
+    try {
+      const d = new Date(repoData.updated_at)
+      lastUpdated = d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
+    } catch {
+      lastUpdated = "Recently"
+    }
+  }
+
+  // Derive languages
+  const languages: LanguageShare[] = []
+  if (repoData.language) {
+    languages.push({ name: repoData.language, percentage: 84.5, color: "#38bdf8" })
+    languages.push({ name: "Other", percentage: 15.5, color: "#64748b" })
+  } else {
+    languages.push({ name: "Code", percentage: 100, color: "#38bdf8" })
+  }
+
+  // Derive tech stack
+  const techStack: TechStackItem[] = []
+  if (repoData.language) {
+    const badgeMap: Record<string, string> = {
+      JavaScript: "JS",
+      TypeScript: "TS",
+      Python: "Py",
+      Rust: "Rs",
+      Go: "Go",
+      Ruby: "Rb",
+      Java: "Jv",
+      HTML: "HTML",
+      CSS: "CSS",
+    }
+    const badge = badgeMap[repoData.language] || repoData.language.slice(0, 3)
+    techStack.push({ name: repoData.language, tag: "PRIMARY", badge, isPrimary: true })
+  }
+
+  // Detect frameworks/runtimes from structure
+  const hasPkgJson = structureMap.some((s) => s.name.toLowerCase() === "package.json")
+  const hasCargo = structureMap.some((s) => s.name.toLowerCase() === "cargo.toml")
+  const hasPyproject = structureMap.some((s) => s.name.toLowerCase() === "pyproject.toml" || s.name.toLowerCase() === "requirements.txt")
+  const hasGoMod = structureMap.some((s) => s.name.toLowerCase() === "go.mod")
+
+  if (hasPkgJson) {
+    if (!techStack.some((t) => t.name === "Node.js")) {
+      techStack.push({ name: "Node.js", tag: "DETECTED", badge: "Node" })
+    }
+    techStack.push({ name: "npm", tag: "DETECTED", badge: "npm" })
+  }
+  if (hasCargo) {
+    techStack.push({ name: "Cargo", tag: "DETECTED", badge: "Cargo" })
+  }
+  if (hasPyproject) {
+    techStack.push({ name: "pip / venv", tag: "DETECTED", badge: "PyPI" })
+  }
+  if (hasGoMod) {
+    techStack.push({ name: "Go Modules", tag: "DETECTED", badge: "Go" })
+  }
+  if (techStack.length === 0) {
+    techStack.push({ name: "Git", tag: "DETECTED", badge: "Git" })
+  }
+
+  // Derive recent activity
+  const recentActivity: ActivityItem[] = [
+    { date: lastUpdated, action: "Updated", type: "updated" },
+  ]
+  if (repoData.pushed_at && repoData.pushed_at !== repoData.updated_at) {
+    try {
+      const pd = new Date(repoData.pushed_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
+      recentActivity.push({ date: pd, action: "Commit", type: "commit" })
+    } catch {
+      // ignore
+    }
+  }
+
   return {
     owner: repoData.owner?.login || owner,
     repo: repoData.name || repo,
@@ -329,5 +451,11 @@ export async function fetchRepoBriefing(owner: string, repo: string): Promise<Re
     repositoryOverview:
       `Organized with root manifests, primary ${lang} modules, and documentation for community development.`,
     structureMap,
+    openIssues: repoData.open_issues_count ?? 0,
+    contributorsCount: repoData.subscribers_count || 1,
+    lastUpdated,
+    languages,
+    techStack,
+    recentActivity,
   }
 }

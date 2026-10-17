@@ -786,7 +786,19 @@ export default function App() {
     setScreen("workspace")
   }
 
-  if (screen === "workspace" || screen === "intro" || screen === "briefing") {
+  if (screen === "intro") {
+    return (
+      <DetectiveOfficeIntro
+        owner={parsedRepo.owner}
+        repo={parsedRepo.repo}
+        repositoryUrl={requestedRepository}
+        onBackToHq={handleBackToHq}
+        onEnterDashboard={handleEnterDashboard}
+      />
+    )
+  }
+
+  if (screen === "workspace" || screen === "briefing") {
     return (
       <Workspace
         onExit={() => setScreen("landing")}

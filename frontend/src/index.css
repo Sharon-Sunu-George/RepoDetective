@@ -963,15 +963,16 @@ button { color: inherit; }
    RETRO DETECTIVE OFFICE INTRO SCENE
    ============================================================ */
 .office-intro-page {
-  min-height: 100vh;
+  height: 100vh;
+  height: 100dvh;
   position: relative;
   background:
-    radial-gradient(circle at 50% 35%, rgba(57, 217, 242, 0.05) 0%, rgba(8, 13, 32, 0.9) 65%, #050816 100%),
+    radial-gradient(circle at 50% 35%, rgba(57, 217, 242, 0.05) 0%, rgba(8, 13, 32, 0.92) 65%, #050816 100%),
     linear-gradient(var(--navy), var(--ink));
   color: var(--text);
   display: flex;
   flex-direction: column;
-  overflow-x: clip;
+  overflow: hidden;
   transition: opacity 0.4s ease;
 }
 
@@ -982,12 +983,15 @@ button { color: inherit; }
 }
 
 .office-top-nav {
-  height: 64px;
+  height: 48px;
+  min-height: 48px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  border-bottom: 1px solid rgba(121, 129, 158, .16);
-  z-index: 10;
+  padding: 0 clamp(16px, 2.5vw, 36px);
+  border-bottom: 1px solid rgba(57, 217, 242, 0.16);
+  background: rgba(6, 10, 24, 0.92);
+  z-index: 20;
 }
 .office-logo-btn {
   background: transparent;
@@ -1008,7 +1012,7 @@ button { color: inherit; }
   color: var(--cyan);
   background: rgba(57, 217, 242, .12);
   border: 1px solid rgba(57, 217, 242, .3);
-  padding: 4px 8px;
+  padding: 3px 8px;
   letter-spacing: .06em;
 }
 .case-target-label {
@@ -1020,7 +1024,7 @@ button { color: inherit; }
   border: 1px solid var(--line);
   color: #a9b8d6;
   font: 8px var(--pixel);
-  padding: 6px 12px;
+  padding: 5px 12px;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
@@ -1040,78 +1044,87 @@ button { color: inherit; }
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 12px 0 24px;
-  width: min(1040px, calc(100% - 32px));
-  margin: 0 auto;
+  padding: 6px clamp(12px, 2vw, 24px) 14px;
+  width: 100%;
+  box-sizing: border-box;
+  overflow: hidden;
 }
 
 .reference-scene-wrapper {
-  width: 100%;
-  border: 3px solid #233462;
-  box-shadow:
-    0 0 0 3px #060a18,
-    10px 10px 0 #03050c,
-    0 0 60px rgba(57, 217, 242, 0.12);
-  background: #060a1a;
   position: relative;
-  display: flex;
-  flex-direction: column;
+  width: 100%;
+  max-width: calc((100dvh - 54px) * 1670 / 941);
+  aspect-ratio: 1670 / 941;
+  max-height: calc(100dvh - 54px);
+  margin: 0 auto;
+  background: #070c1e;
   border-radius: 4px;
   overflow: hidden;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.7);
+  border: 1px solid rgba(57, 217, 242, 0.22);
 }
 
 .reference-scene-viewport {
   width: 100%;
+  height: 100%;
   position: relative;
   background: #070c1e;
-  border-bottom: 2px solid #1c2a52;
   overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
-.reference-scene-svg {
+.reference-scene-bg-img {
   width: 100%;
-  height: auto;
+  height: 100%;
+  object-fit: cover;
   display: block;
+  image-rendering: pixelated;
+  image-rendering: -moz-crisp-edges;
+  image-rendering: crisp-edges;
 }
 
 /* ============================================================
-   ENVIRONMENTAL & IDLE RETRO ANIMATIONS
+   ENVIRONMENTAL RETRO OVERLAYS & AMBIENT ANIMATIONS
    ============================================================ */
 
-/* Rain Streaks */
+/* Rain Streaks on the Window: constrained strictly to window glass pane */
+.scene-rain-overlay {
+  position: absolute;
+  left: 14.49%;
+  top: 5.84%;
+  width: 18.14%;
+  height: 47.82%;
+  pointer-events: none;
+  overflow: hidden;
+  z-index: 2;
+}
+.rain-svg {
+  width: 100%;
+  height: 100%;
+}
 .rain-layer line {
   animation: rainMotion 0.8s linear infinite;
 }
 @keyframes rainMotion {
-  0% { transform: translate(0, 0); opacity: 0.3; }
-  50% { opacity: 0.6; }
-  100% { transform: translate(-20px, 55px); opacity: 0.2; }
-}
-
-/* City Skyline Lights Subtle Flicker */
-.city-lights-flicker rect {
-  animation: cityFlicker 3s steps(2) infinite;
-}
-.city-lights-flicker rect:nth-child(2n) {
-  animation-delay: 0.8s;
-  animation-duration: 2.2s;
-}
-.city-lights-flicker rect:nth-child(3n) {
-  animation-delay: 1.5s;
-  animation-duration: 4s;
-}
-@keyframes cityFlicker {
-  0%, 100% { opacity: 0.9; }
-  50% { opacity: 0.3; }
-  75% { opacity: 1; }
-}
-.city-beacon-blink {
-  animation: blink 1.2s steps(2) infinite;
+  0% { transform: translate(0, 0); opacity: 0.25; }
+  50% { opacity: 0.65; }
+  100% { transform: translate(-18px, 50px); opacity: 0.15; }
 }
 
 /* Cozy Corner Oil Lantern Warm Glow */
-.lantern-pulse {
+.scene-lantern-glow {
+  position: absolute;
+  left: 6.5%;
+  top: 44%;
+  width: 8.5%;
+  height: 14%;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 179, 71, 0.45) 0%, rgba(255, 140, 26, 0.15) 50%, transparent 75%);
+  pointer-events: none;
   animation: lanternGlow 2.8s ease-in-out infinite alternate;
+  z-index: 2;
 }
 @keyframes lanternGlow {
   0% { opacity: 0.75; transform: scale(0.96); }
@@ -1119,153 +1132,360 @@ button { color: inherit; }
 }
 
 /* Banker's Desk Lamp Warm Light Cone */
-.desk-lamp-cone {
+.scene-desklamp-glow {
+  position: absolute;
+  left: 74.5%;
+  top: 36%;
+  width: 11%;
+  height: 20%;
+  border-radius: 50%;
+  background: radial-gradient(ellipse, rgba(255, 230, 153, 0.4) 0%, rgba(255, 170, 51, 0.15) 45%, transparent 75%);
+  pointer-events: none;
   animation: lampWarmth 3.2s ease-in-out infinite alternate;
+  z-index: 2;
 }
 @keyframes lampWarmth {
   0% { opacity: 0.82; }
   100% { opacity: 1; }
 }
 
-/* CRT Screen Phosphor & Glow Flicker */
-.crt-flicker-overlay {
-  animation: crtFlicker 0.18s steps(2) infinite;
-}
-@keyframes crtFlicker {
-  0% { opacity: 0.75; }
-  50% { opacity: 0.88; }
-  100% { opacity: 0.8; }
-}
-.crt-blink {
-  animation: blink 0.9s steps(2) infinite;
-}
-.crt-led {
-  animation: blink 1.4s steps(2) infinite;
-}
-
-/* Board Active Glow during problem & clues */
-.board-active-glow {
-  filter: drop-shadow(0 0 10px rgba(57, 217, 242, 0.45));
+/* ============================================================
+   PIXEL ART DETECTIVE CHARACTER (ANIMATED SPRITES FROM ARTWORK)
+   ============================================================ */
+.scene-detective-character {
+  position: absolute;
+  left: 36.2%;
+  top: 38.6%;
+  width: 17.5%;
+  height: 38.8%;
+  pointer-events: none;
+  z-index: 5;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
 }
 
-/* Detective Looping Stepped Retro Idle Bobbing (16-bit style) */
-.detective-retro-idle {
-  animation: detective16BitIdle 1.8s steps(2) infinite;
-  transform-origin: center bottom;
-}
-@keyframes detective16BitIdle {
-  0% { transform: translateY(0); }
-  50% { transform: translateY(-3px); }
-  100% { transform: translateY(0); }
-}
-
-/* Magnifying Glass Sight Beam & Lens Glow */
-.detective-sight-beam {
-  animation: beamPulse 2.4s ease-in-out infinite alternate;
-}
-@keyframes beamPulse {
-  0% { opacity: 0.5; }
-  100% { opacity: 0.85; }
-}
-.glass-lens-ring {
-  animation: lensGlow 2s ease-in-out infinite alternate;
-}
-@keyframes lensGlow {
-  0% { stroke: #00e5ff; filter: drop-shadow(0 0 3px rgba(0, 229, 255, 0.5)); }
-  100% { stroke: #8af4ff; filter: drop-shadow(0 0 10px rgba(0, 229, 255, 0.9)); }
+.detective-sprite-frame {
+  width: 100%;
+  height: 100%;
+  background-size: contain;
+  background-position: center bottom;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+  image-rendering: -moz-crisp-edges;
+  image-rendering: crisp-edges;
 }
 
-/* Lens Sparkle Twinkles */
-.lens-twinkle {
-  animation: lensSparkle 3s ease-in-out infinite;
-  transform-origin: center;
+/* Classic Retro Game Idle Animation: upper body gently moves as breathing, scarf sways slightly, feet firmly planted */
+.detective-is-idle .detective-sprite-frame {
+  animation: detectiveRetroIdle 2.0s steps(1) infinite;
 }
-.lens-twinkle-1 {
-  animation-delay: 0.3s;
-}
-.lens-twinkle-2 {
-  animation-delay: 1.8s;
-}
-@keyframes lensSparkle {
-  0%, 75%, 100% { opacity: 0; transform: scale(0.3); }
-  85% { opacity: 1; transform: scale(1.3); }
-  92% { opacity: 0.8; transform: scale(1); }
+@keyframes detectiveRetroIdle {
+  0%, 100% { background-image: url('/images/detective-idle-1.png'); }
+  25% { background-image: url('/images/detective-idle-2.png'); }
+  50% { background-image: url('/images/detective-idle-3.png'); }
+  75% { background-image: url('/images/detective-idle-4.png'); }
 }
 
-/* Floating Light Particles */
-.floating-particles circle {
-  animation: particleDrift 6s ease-in-out infinite alternate;
+/* Subtle magnifying-glass sparkle */
+.detective-lens-sparkle {
+  position: absolute;
+  right: 21%;
+  top: 36%;
+  width: 16px;
+  height: 16px;
+  pointer-events: none;
 }
-.particle-1 { animation-delay: 0s; }
-.particle-2 { animation-delay: 1.5s; }
-.particle-3 { animation-delay: 3s; }
-.particle-4 { animation-delay: 4.5s; }
-@keyframes particleDrift {
-  0% { transform: translate(0, 0); opacity: 0.3; }
-  50% { opacity: 0.7; }
-  100% { transform: translate(-10px, -18px); opacity: 0.2; }
+.sparkle-star {
+  position: absolute;
+  background: #00e5ff;
+  border-radius: 1px;
+  transform: rotate(45deg);
+  box-shadow: 0 0 6px #00e5ff;
+}
+.sparkle-star-1 {
+  width: 6px;
+  height: 6px;
+  left: 5px;
+  top: 5px;
+  animation: sparkleTwinkle 2.2s ease-in-out infinite;
+}
+.sparkle-star-2 {
+  width: 4px;
+  height: 4px;
+  right: 1px;
+  top: 0px;
+  background: #ffffff;
+  animation: sparkleTwinkle 2.2s ease-in-out infinite 1.1s;
+}
+@keyframes sparkleTwinkle {
+  0%, 70%, 100% { opacity: 0; transform: scale(0.2) rotate(45deg); }
+  85% { opacity: 1; transform: scale(1.4) rotate(45deg); }
+  92% { opacity: 0.8; transform: scale(1) rotate(45deg); }
 }
 
 /* ============================================================
-   CLASSIC RPG DIALOGUE BOX (MATCHING REFERENCE IMAGE)
+   CRT SCREEN DISPLAY ALIGNED INSIDE DESK MONITOR BEZEL
+   ============================================================ */
+.scene-crt-monitor-overlay {
+  position: absolute;
+  left: 55.63%;
+  top: 40.85%;
+  width: 15.93%;
+  height: 13.71%;
+  pointer-events: none;
+  background: rgba(3, 10, 22, 0.94);
+  border-radius: 3px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  z-index: 2;
+  box-shadow: inset 0 0 10px rgba(0, 229, 255, 0.25);
+}
+
+.crt-scanlines {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    rgba(18, 16, 16, 0) 50%, 
+    rgba(0, 0, 0, 0.28) 50%
+  );
+  background-size: 100% 3px;
+  pointer-events: none;
+  z-index: 4;
+  opacity: 0.65;
+}
+
+.crt-glow-overlay {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at center, rgba(0, 229, 255, 0.1) 0%, transparent 80%);
+  pointer-events: none;
+  z-index: 3;
+}
+
+.crt-terminal-content {
+  position: relative;
+  z-index: 5;
+  width: 100%;
+  height: 100%;
+  padding: clamp(2px, 0.35vw, 4px) clamp(4px, 0.5vw, 6px);
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  font-family: var(--mono);
+  color: #39d9f2;
+}
+
+.crt-term-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid rgba(57, 217, 242, 0.25);
+  padding-bottom: 1px;
+  font-size: clamp(5px, 0.52vw, 7.5px);
+  color: #00e5ff;
+  letter-spacing: 0.06em;
+}
+
+.crt-status-dot {
+  color: #00ffaa;
+  font-size: 6.5px;
+  animation: pulse 1.4s infinite;
+}
+
+.crt-term-pulse {
+  color: #00ffaa;
+  font-size: clamp(4.5px, 0.45vw, 6.5px);
+  background: rgba(0, 255, 170, 0.15);
+  padding: 0 3px;
+  border-radius: 2px;
+}
+
+.crt-term-target-row {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  font-size: clamp(5.5px, 0.6vw, 8.5px);
+  color: #ffffff;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.crt-prompt-symbol {
+  color: #00e5ff;
+}
+
+.crt-term-meta-row {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: clamp(4.5px, 0.48vw, 7px);
+  color: #a4b3d6;
+}
+
+.crt-term-stars {
+  color: #ffd15c;
+}
+
+.crt-scan-progress-bar {
+  position: relative;
+  width: 100%;
+  height: 3px;
+  background: rgba(0, 229, 255, 0.15);
+  border-radius: 1px;
+  overflow: hidden;
+  margin: 1px 0;
+}
+
+.crt-progress-fill {
+  height: 100%;
+  width: 78%;
+  background: linear-gradient(90deg, #00b8d4, #00e5ff);
+  animation: progressPulse 2.5s ease-in-out infinite alternate;
+}
+
+@keyframes progressPulse {
+  0% { width: 55%; }
+  100% { width: 92%; }
+}
+
+.crt-file-tree {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  font-size: clamp(4.2px, 0.46vw, 6.8px);
+  color: #8da4cf;
+  overflow: hidden;
+}
+
+.crt-file-line {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.crt-file-active {
+  color: #00e5ff;
+  font-weight: 600;
+}
+
+.crt-file-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 65%;
+}
+
+.crt-file-role {
+  color: #4a7bb0;
+  font-size: 0.85em;
+}
+
+.crt-term-status-line {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  font-size: clamp(4.5px, 0.48vw, 7px);
+  color: #ffd15c;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.crt-cursor {
+  animation: blink 0.75s steps(2) infinite;
+  color: #00e5ff;
+  font-weight: bold;
+}
+
+/* Reduced Motion Support */
+@media (prefers-reduced-motion: reduce) {
+  .detective-is-idle .detective-sprite-frame,
+  .detective-is-talking .detective-sprite-frame,
+  .stage-2.detective-is-idle .detective-sprite-frame,
+  .stage-3.detective-is-idle .detective-sprite-frame,
+  .stage-4.detective-is-idle .detective-sprite-frame {
+    animation: none !important;
+    background-image: url('/images/detective-idle-1.png') !important;
+    transform: none !important;
+  }
+  .sparkle-star-1,
+  .sparkle-star-2,
+  .crt-progress-fill,
+  .rain-layer line {
+    animation: none !important;
+  }
+}
+
+/* ============================================================
+   CLASSIC RPG DIALOGUE BOX (POSITIONED OVER REFERENCE PANEL)
    ============================================================ */
 .reference-dialogue-panel {
-  background: #060b1c;
-  padding: 14px 20px 16px;
+  position: absolute;
+  left: 20.39%;
+  bottom: 4.5%;
+  width: 58.85%;
+  z-index: 10;
   cursor: pointer;
   user-select: none;
-  position: relative;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
 }
 
 /* Double Cyan Pixel Border Frame with Notched Pixel Corners */
 .rpg-border-outer {
-  border: 3px solid #00e5ff;
+  border: 2.5px solid #00e5ff;
   box-shadow:
-    0 0 16px rgba(0, 229, 255, 0.25),
-    inset 0 0 16px rgba(0, 229, 255, 0.08);
-  border-radius: 6px;
-  padding: 3px;
+    0 0 14px rgba(0, 229, 255, 0.35),
+    inset 0 0 14px rgba(0, 229, 255, 0.1);
+  border-radius: 5px;
+  padding: 2px;
   background: #00e5ff;
 }
 
 .rpg-border-inner {
-  border: 2px solid #00e5ff;
-  border-radius: 4px;
-  background: linear-gradient(180deg, #091228 0%, #050a18 100%);
-  padding: 16px 20px;
+  border: 1.5px solid #00e5ff;
+  border-radius: 3px;
+  background: linear-gradient(180deg, rgba(8, 15, 34, 0.98) 0%, rgba(4, 8, 18, 0.98) 100%);
+  padding: clamp(6px, 0.8vw, 10px) clamp(10px, 1.2vw, 16px);
+  box-sizing: border-box;
 }
 
 .rpg-dialogue-content {
   display: flex;
-  align-items: flex-start;
-  gap: 20px;
+  align-items: center;
+  gap: clamp(10px, 1.3vw, 16px);
 }
 
 /* Detective Portrait Frame in Dialogue Box */
 .ref-portrait-frame {
-  width: 72px;
-  height: 72px;
+  width: clamp(50px, 5vw, 68px);
+  height: clamp(50px, 5vw, 68px);
   flex-shrink: 0;
   position: relative;
   background: #081024;
   border: 2px solid #00e5ff;
-  box-shadow: 0 0 10px rgba(0, 229, 255, 0.3);
+  box-shadow: 0 0 8px rgba(0, 229, 255, 0.35);
   display: flex;
   align-items: center;
   justify-content: center;
+  border-radius: 2px;
+  overflow: hidden;
 }
-.ref-portrait-svg {
-  width: 64px;
-  height: 64px;
+.ref-portrait-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  image-rendering: pixelated;
+  image-rendering: -moz-crisp-edges;
+  image-rendering: crisp-edges;
   display: block;
-}
-.portrait-talking .ref-portrait-svg {
-  animation: portraitTalkingBounce 0.28s steps(2) infinite;
-}
-@keyframes portraitTalkingBounce {
-  0% { transform: translateY(0); }
-  50% { transform: translateY(-1.5px); }
-  100% { transform: translateY(0); }
 }
 
 /* Portrait Corner Cyan Brackets */
@@ -1274,21 +1494,23 @@ button { color: inherit; }
 .p-bracket-bl,
 .p-bracket-br {
   position: absolute;
-  width: 5px;
-  height: 5px;
+  width: 4px;
+  height: 4px;
   background: #00e5ff;
+  z-index: 2;
 }
-.p-bracket-tl { top: -2px; left: -2px; }
-.p-bracket-tr { top: -2px; right: -2px; }
-.p-bracket-bl { bottom: -2px; left: -2px; }
-.p-bracket-br { bottom: -2px; right: -2px; }
+.p-bracket-tl { top: -1px; left: -1px; }
+.p-bracket-tr { top: -1px; right: -1px; }
+.p-bracket-bl { bottom: -1px; left: -1px; }
+.p-bracket-br { bottom: -1px; right: -1px; }
 
 /* Right Text Container */
 .rpg-text-container {
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: clamp(2px, 0.4vw, 5px);
+  min-width: 0;
 }
 
 .rpg-header-row {
@@ -1297,32 +1519,43 @@ button { color: inherit; }
   justify-content: space-between;
 }
 .rpg-speaker-title {
-  font: 9.5px var(--pixel);
+  font: clamp(7.5px, 0.7vw, 9.5px) var(--pixel);
   color: #00e5ff;
   letter-spacing: 0.08em;
-  text-shadow: 0 0 8px rgba(0, 229, 255, 0.6);
+  text-shadow: 0 0 6px rgba(0, 229, 255, 0.6);
 }
 .rpg-stage-indicator {
-  font: 9px var(--mono);
+  font: clamp(7px, 0.65vw, 9px) var(--mono);
   color: #39d9f2;
   background: rgba(57, 217, 242, 0.12);
-  padding: 3px 8px;
+  padding: 1px 6px;
   border: 1px solid rgba(57, 217, 242, 0.3);
   letter-spacing: 0.06em;
 }
 
 .rpg-message-body {
-  min-height: 54px;
+  min-height: clamp(38px, 4vw, 54px);
   display: flex;
   flex-direction: column;
-  justify-content: center;
+  justify-content: flex-start;
 }
 .rpg-p {
   margin: 0;
-  font-family: var(--sans);
-  font-size: 15.5px;
-  line-height: 1.6;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  font-size: clamp(12.5px, 0.95vw, 14.5px);
+  line-height: 1.45;
+  letter-spacing: 0.01em;
   color: #f0f4fc;
+  overflow-wrap: break-word;
+  word-break: normal;
+}
+.rpg-typed-text {
+  color: #f0f4fc;
+}
+.rpg-untyped-text {
+  visibility: hidden;
+  user-select: none;
+  pointer-events: none;
 }
 .rpg-p b {
   color: #39d9f2;
@@ -1334,7 +1567,7 @@ button { color: inherit; }
 .rpg-typewriter-cursor {
   color: #00e5ff;
   font-weight: bold;
-  margin-left: 4px;
+  margin-left: 2px;
   animation: blink 0.7s steps(2) infinite;
 }
 
@@ -1343,22 +1576,22 @@ button { color: inherit; }
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding-top: 10px;
-  border-top: 1px solid rgba(0, 229, 255, 0.15);
+  padding-top: clamp(2px, 0.35vw, 5px);
+  border-top: 1px solid rgba(0, 229, 255, 0.18);
 }
 .rpg-hint-note {
   display: flex;
   align-items: center;
-  gap: 8px;
-  font: 10.5px var(--mono);
+  gap: 6px;
+  font: clamp(7.5px, 0.68vw, 9.5px) var(--mono);
   color: #798aa8;
 }
 .rpg-key-tag {
   background: #111a36;
   border: 1px solid #2d4177;
   color: #cdd8f0;
-  padding: 2px 6px;
-  font: 7.5px var(--pixel);
+  padding: 1px 4px;
+  font: 6.5px var(--pixel);
 }
 .rpg-hint-text {
   color: #8c9cb8;
@@ -1366,16 +1599,16 @@ button { color: inherit; }
 
 /* Action Buttons & Flashing Cyan Diamond */
 .rpg-continue-btn {
-  font: 8.5px var(--pixel);
-  height: 38px;
-  padding: 0 16px;
-  background: rgba(16, 28, 56, 0.8);
+  font: clamp(6.5px, 0.6vw, 8px) var(--pixel);
+  height: clamp(24px, 2.4vw, 30px);
+  padding: 0 clamp(8px, 0.9vw, 14px);
+  background: rgba(16, 28, 56, 0.85);
   border: 1.5px solid #00e5ff;
   color: #00e5ff;
   letter-spacing: 0.04em;
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   box-shadow: 0 0 10px rgba(0, 229, 255, 0.2);
   transition: 0.15s ease;
 }
@@ -1386,7 +1619,7 @@ button { color: inherit; }
 }
 .rpg-cyan-diamond {
   color: #00e5ff;
-  font-size: 12px;
+  font-size: 11px;
   animation: diamondPulse 1.2s steps(2) infinite;
 }
 @keyframes diamondPulse {
@@ -1395,21 +1628,21 @@ button { color: inherit; }
 }
 
 .rpg-enter-btn {
-  font: 9.5px var(--pixel);
-  height: 44px;
-  padding: 0 22px;
+  font: clamp(7px, 0.68vw, 9px) var(--pixel);
+  height: clamp(26px, 2.7vw, 34px);
+  padding: 0 clamp(10px, 1.2vw, 16px);
   background: #00e5ff;
   color: #050a18;
   letter-spacing: 0.05em;
   box-shadow:
-    0 0 18px rgba(0, 229, 255, 0.5),
-    inset -3px -3px 0 #1faec0;
+    0 0 14px rgba(0, 229, 255, 0.5),
+    inset -2px -2px 0 #1faec0;
   animation: enterPulse 1.8s ease-in-out infinite alternate;
 }
 .rpg-enter-btn:hover {
   filter: brightness(1.12);
   transform: translate(-1px, -1px);
-  box-shadow: 0 0 26px rgba(0, 229, 255, 0.7);
+  box-shadow: 0 0 20px rgba(0, 229, 255, 0.7);
 }
 @keyframes enterPulse {
   0% { box-shadow: 0 0 12px rgba(0, 229, 255, 0.35); }
@@ -1442,10 +1675,37 @@ button { color: inherit; }
   }
 }
 
-/* Mobile & Responsive Adjustments */
+/* Responsive Adjustments */
+@media (max-width: 960px) {
+  .office-stage-container {
+    width: calc(100% - 20px);
+    padding: 8px 0 16px;
+  }
+  .reference-scene-viewport {
+    aspect-ratio: auto;
+    display: flex;
+    flex-direction: column;
+  }
+  .reference-scene-bg-img {
+    height: 360px;
+    object-fit: cover;
+  }
+  .reference-dialogue-panel {
+    position: relative;
+    left: auto;
+    top: auto;
+    width: 100%;
+    margin-top: 0;
+    min-height: auto;
+  }
+}
+
 @media (max-width: 768px) {
   .office-nav-center {
     display: none;
+  }
+  .reference-scene-bg-img {
+    height: 260px;
   }
   .rpg-dialogue-content {
     flex-direction: column;
@@ -1460,6 +1720,9 @@ button { color: inherit; }
     width: 50px;
     height: 50px;
   }
+  .rpg-p {
+    font-size: 14px;
+  }
   .rpg-footer-row {
     flex-direction: column;
     align-items: stretch;
@@ -1472,3 +1735,512 @@ button { color: inherit; }
     justify-content: center;
   }
 }
+
+/* ============================================================
+   RETRO PIXEL-ART HUD INFORMATION SIDE PANELS (OVERLAY)
+   ============================================================ */
+
+/* Small Pixel-Style Edge Trigger Tabs (Fixed to screen border when closed; X closes when open) */
+.hud-edge-tab {
+  position: absolute;
+  top: 72px;
+  z-index: 35;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 9px;
+  background: rgba(6, 14, 30, 0.95);
+  border: 1px solid rgba(57, 217, 242, 0.45);
+  color: var(--cyan);
+  font: 8px var(--pixel);
+  letter-spacing: 0.05em;
+  cursor: pointer;
+  pointer-events: auto;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.65), 0 0 10px rgba(57, 217, 242, 0.15);
+  backdrop-filter: blur(8px);
+  white-space: nowrap;
+}
+.hud-edge-tab:hover {
+  background: rgba(57, 217, 242, 0.2);
+  border-color: var(--cyan);
+  color: #ffffff;
+  box-shadow: 0 0 16px rgba(57, 217, 242, 0.45);
+}
+
+.hud-edge-tab-left {
+  left: 0;
+  border-left: 0;
+  border-radius: 0 4px 4px 0;
+}
+.hud-edge-tab-right {
+  right: 0;
+  border-right: 0;
+  border-radius: 4px 0 0 4px;
+}
+
+.hud-tab-icon {
+  font-size: 11px;
+  line-height: 1;
+}
+.hud-tab-label {
+  font-weight: 700;
+}
+.hud-tab-arrow {
+  color: var(--cyan);
+  font-size: 9px;
+}
+
+/* Sliding HUD Panels (Width made smaller per user request) */
+.hud-panel {
+  position: absolute;
+  top: 54px;
+  bottom: 10px;
+  z-index: 40;
+  width: clamp(200px, 14.5vw, 228px);
+  max-width: calc(100vw - 24px);
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+  pointer-events: none;
+}
+
+.hud-panel.hud-panel-open {
+  pointer-events: auto;
+}
+
+.hud-panel-left {
+  left: 10px;
+  transform: translateX(-105%);
+}
+.hud-panel-left.hud-panel-open {
+  transform: translateX(0);
+}
+
+.hud-panel-right {
+  right: 10px;
+  transform: translateX(105%);
+}
+.hud-panel-right.hud-panel-open {
+  transform: translateX(0);
+}
+
+.hud-panel-inner {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+}
+
+/* Panel Scrollable Content */
+.hud-panel-content {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.hud-panel-content::-webkit-scrollbar {
+  width: 3px;
+}
+.hud-panel-content::-webkit-scrollbar-track {
+  background: rgba(6, 12, 28, 0.5);
+}
+.hud-panel-content::-webkit-scrollbar-thumb {
+  background: rgba(57, 217, 242, 0.35);
+  border-radius: 2px;
+}
+.hud-panel-content::-webkit-scrollbar-thumb:hover {
+  background: var(--cyan);
+}
+
+/* Sub-Cards with Authentic Corner Brackets */
+.hud-section-card {
+  position: relative;
+  background: rgba(6, 14, 30, 0.92);
+  border: 1px solid rgba(57, 217, 242, 0.38);
+  border-radius: 3px;
+  padding: 8px 10px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.6), inset 0 0 12px rgba(57, 217, 242, 0.03);
+  backdrop-filter: blur(10px);
+}
+
+/* Corner brackets matching reference image */
+.card-bracket-tl,
+.card-bracket-tr,
+.card-bracket-bl,
+.card-bracket-br {
+  position: absolute;
+  width: 5px;
+  height: 5px;
+  pointer-events: none;
+}
+.card-bracket-tl {
+  top: -1px;
+  left: -1px;
+  border-top: 2px solid var(--cyan);
+  border-left: 2px solid var(--cyan);
+}
+.card-bracket-tr {
+  top: -1px;
+  right: -1px;
+  border-top: 2px solid var(--cyan);
+  border-right: 2px solid var(--cyan);
+}
+.card-bracket-bl {
+  bottom: -1px;
+  left: -1px;
+  border-bottom: 2px solid var(--cyan);
+  border-left: 2px solid var(--cyan);
+}
+.card-bracket-br {
+  bottom: -1px;
+  right: -1px;
+  border-bottom: 2px solid var(--cyan);
+  border-right: 2px solid var(--cyan);
+}
+
+.hud-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+  padding-bottom: 3px;
+  border-bottom: 1px solid rgba(57, 217, 242, 0.14);
+}
+.hud-card-title-group {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.hud-card-icon {
+  font-size: 11px;
+  color: var(--cyan);
+}
+.hud-card-title {
+  font: 9px var(--pixel);
+  color: var(--cyan);
+  letter-spacing: 0.06em;
+}
+.hud-card-slashes {
+  color: rgba(57, 217, 242, 0.45);
+  font-family: var(--mono);
+  font-size: 9px;
+}
+.hud-card-close-btn {
+  background: transparent;
+  border: 1px solid rgba(57, 217, 242, 0.25);
+  color: #94a3b8;
+  font: 9px var(--mono);
+  width: 16px;
+  height: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  border-radius: 2px;
+  transition: 0.15s ease;
+  line-height: 1;
+}
+.hud-card-close-btn:hover {
+  background: rgba(248, 113, 113, 0.2);
+  border-color: #f87171;
+  color: #f87171;
+}
+
+/* 1. Languages Bar Chart */
+.hud-languages-list {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.hud-lang-row {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.hud-lang-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font: 10px var(--mono);
+}
+.hud-lang-name {
+  color: #e2e8f0;
+}
+.hud-lang-pct {
+  color: #94a3b8;
+  font-size: 9px;
+}
+.hud-lang-track {
+  height: 5px;
+  width: 100%;
+  background: rgba(255, 255, 255, 0.07);
+  border-radius: 2px;
+  overflow: hidden;
+}
+.hud-lang-bar {
+  height: 100%;
+  border-radius: 2px;
+  transition: width 0.4s ease;
+}
+
+/* 2. Tech Stack Badges */
+.hud-tech-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.hud-tech-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 3px 6px;
+  background: rgba(5, 11, 28, 0.6);
+  border: 1px solid rgba(57, 217, 242, 0.14);
+  border-radius: 2px;
+}
+.hud-tech-left {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.hud-tech-icon-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1px 3px;
+  font: 8px var(--mono);
+  font-weight: 700;
+  border-radius: 2px;
+  min-width: 20px;
+  line-height: 1.2;
+  border: 1px solid transparent;
+}
+.hud-badge-js {
+  background: #facc15;
+  color: #000000;
+  border-color: #eab308;
+}
+.hud-badge-ts {
+  background: #38bdf8;
+  color: #000000;
+  border-color: #0284c7;
+}
+.hud-badge-node {
+  background: #22c55e;
+  color: #ffffff;
+  border-color: #16a34a;
+}
+.hud-badge-npm {
+  background: #ef4444;
+  color: #ffffff;
+  border-color: #dc2626;
+}
+
+.hud-tech-name {
+  font: 10px var(--mono);
+  color: #f1f5f9;
+}
+.hud-tech-tag {
+  font: 7px var(--pixel);
+  padding: 1px 4px;
+  border-radius: 2px;
+  letter-spacing: 0.04em;
+}
+.hud-tag-primary {
+  background: rgba(57, 217, 242, 0.2);
+  border: 1px solid rgba(57, 217, 242, 0.45);
+  color: var(--cyan);
+}
+.hud-tag-detected {
+  background: rgba(148, 163, 184, 0.12);
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  color: #94a3b8;
+}
+
+/* 3. Repository Stats 2x2 Grid */
+.hud-stats-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 5px;
+}
+.hud-stat-cell {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 6px;
+  background: rgba(5, 11, 28, 0.65);
+  border: 1px solid rgba(57, 217, 242, 0.16);
+  border-radius: 2px;
+}
+.hud-stat-icon {
+  font-size: 12px;
+  color: var(--cyan);
+}
+.stat-icon-gold {
+  color: #fbbf24;
+  text-shadow: 0 0 5px rgba(251, 191, 36, 0.5);
+}
+.hud-stat-info {
+  display: flex;
+  flex-direction: column;
+}
+.hud-stat-val {
+  font: 10px var(--pixel);
+  color: #ffffff;
+  line-height: 1.2;
+}
+.hud-stat-lbl {
+  font: 7px var(--mono);
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+/* 4. Case File Meta Table */
+.hud-meta-table {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+.hud-meta-row {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.hud-meta-lbl {
+  font: 8px var(--pixel);
+  color: var(--cyan);
+  letter-spacing: 0.05em;
+}
+.hud-meta-val {
+  font: 11px var(--mono);
+  color: #f1f5f9;
+}
+.hud-meta-val-with-copy {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+.hud-copy-btn {
+  background: rgba(57, 217, 242, 0.12);
+  border: 1px solid rgba(57, 217, 242, 0.35);
+  color: var(--cyan);
+  font: 8px var(--pixel);
+  padding: 2px 6px;
+  cursor: pointer;
+  border-radius: 2px;
+  transition: 0.15s ease;
+}
+.hud-copy-btn:hover {
+  background: rgba(57, 217, 242, 0.25);
+  border-color: var(--cyan);
+  color: #ffffff;
+}
+
+/* 5. Quick Read */
+.hud-quick-read-content {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.hud-readme-tag {
+  font: 10px var(--pixel);
+  color: #38bdf8;
+}
+.hud-readme-snippet {
+  font: 11px/1.4 var(--mono);
+  color: #94a3b8;
+  margin: 0;
+  max-height: 48px;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+}
+.hud-readme-action-btn {
+  background: rgba(57, 217, 242, 0.12);
+  border: 1px solid rgba(57, 217, 242, 0.4);
+  color: var(--cyan);
+  font: 8px var(--pixel);
+  padding: 5px 8px;
+  cursor: pointer;
+  letter-spacing: 0.05em;
+  transition: 0.15s ease;
+  border-radius: 2px;
+  text-align: center;
+}
+.hud-readme-action-btn:hover {
+  background: rgba(57, 217, 242, 0.25);
+  border-color: var(--cyan);
+  color: #ffffff;
+}
+
+/* 6. Key Files */
+.hud-files-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.hud-file-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font: 11px var(--mono);
+  color: #cbd5e1;
+  padding: 3px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+}
+.hud-file-ico {
+  font-size: 11px;
+}
+.hud-file-txt {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 7. Recent Activity Timeline */
+.hud-activity-timeline {
+  position: relative;
+  padding-left: 14px;
+  border-left: 1px dashed rgba(57, 217, 242, 0.35);
+  margin-left: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.hud-activity-node {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  font: 10px var(--mono);
+}
+.hud-timeline-dot {
+  position: absolute;
+  left: -18px;
+  top: 3px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--cyan);
+  box-shadow: 0 0 6px var(--cyan);
+}
+.hud-activity-date {
+  color: #f1f5f9;
+  font-weight: 600;
+}
+.hud-activity-action {
+  color: #94a3b8;
+  font-size: 9px;
+}
+
