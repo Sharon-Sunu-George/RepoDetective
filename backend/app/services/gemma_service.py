@@ -1,23 +1,18 @@
-"""Gemma model provider — configurable, with a clearly labelled mock mode."""
+
+"""Gemma model provider using Google's official Gen AI SDK."""
 
 from __future__ import annotations
 
 from typing import Any
 
-import httpx
+from google import genai
+from google.genai import types
 
 from app.core.config import settings
 
 
 class GemmaService:
-    """Wraps Gemma / generic LLM inference.
-
-    - Reads credentials from environment (GEMMA_API_KEY, GEMMA_API_BASE).
-    - When mock_mode is True or credentials are missing, returns deterministic
-      mock responses labelled as such (never pretends to be real inference).
-    - When live, posts to {api_base}/chat/completions (OpenAI-compatible) or
-      a simple /generate endpoint — both are tried.
-    """
+    """Generate text using Gemma, with explicitly labelled mock fallback."""
 
     def __init__(
         self,
@@ -27,15 +22,29 @@ class GemmaService:
         mock_mode: bool | None = None,
         timeout: float | None = None,
     ) -> None:
-        self.api_key = api_key if api_key is not None else settings.gemma_api_key
-        self.api_base = (api_base if api_base is not None else settings.gemma_api_base or "").rstrip("/")
+        self.api_key = (
+            api_key if api_key is not None else settings.gemma_api_key
+        )
         self.model = model or settings.gemma_model
+        self.timeout = (
+            timeout
+            if timeout is not None
+            else settings.gemma_timeout_seconds
+        )
+
+        # Never silently force live mode without credentials.
         if mock_mode is not None:
             self.mock_mode = mock_mode
         else:
-            # Auto mock if no credentials
-            self.mock_mode = settings.gemma_mock_mode or not self.api_key or not self.api_base
-        self.timeout = timeout if timeout is not None else settings.gemma_timeout_seconds
+            self.mock_mode = (
+                settings.gemma_mock_mode or not self.api_key
+            )
+
+        self.client = (
+            genai.Client(api_key=self.api_key)
+            if self.api_key and not self.mock_mode
+            else None
+        )
 
     @property
     def mode(self) -> str:
@@ -48,75 +57,79 @@ class GemmaService:
         max_tokens: int = 800,
         temperature: float = 0.4,
     ) -> dict[str, Any]:
-        """Generate text. Returns {text, mode, model}."""
-        if self.mock_mode or not self.api_key or not self.api_base:
+        """Return a dictionary containing text, mode, and model."""
+
+        if self.mock_mode or self.client is None:
             return {
                 "text": self._mock_text(prompt, system),
                 "mode": "mock",
                 "model": f"{self.model} (mock)",
             }
-        # Live path — try OpenAI-compatible chat/completions first
-        headers = {
-            "Authorization": f"Bearer {self.api_key}",
-            "Content-Type": "application/json",
-        }
-        payload: dict[str, Any] = {
-            "model": self.model,
-            "messages": [],
-            "max_tokens": max_tokens,
-            "temperature": temperature,
-        }
-        if system:
-            payload["messages"].append({"role": "system", "content": system})
-        payload["messages"].append({"role": "user", "content": prompt})
 
-        async with httpx.AsyncClient(timeout=self.timeout) as client:
-            # Attempt 1: /chat/completions
-            try:
-                url = f"{self.api_base}/chat/completions"
-                resp = await client.post(url, json=payload, headers=headers)
-                if resp.status_code < 400:
-                    data = resp.json()
-                    # OpenAI shape
-                    text = (
-                        data.get("choices", [{}])[0].get("message", {}).get("content")
-                        or data.get("choices", [{}])[0].get("text")
-                        or ""
-                    )
-                    if text:
-                        return {"text": text, "mode": "live", "model": self.model}
-            except Exception:
-                pass
-            # Attempt 2: /generate (simple)
-            try:
-                url2 = f"{self.api_base}/generate"
-                resp2 = await client.post(
-                    url2,
-                    json={"prompt": prompt, "model": self.model, "max_tokens": max_tokens},
-                    headers=headers,
-                )
-                if resp2.status_code < 400:
-                    data2 = resp2.json()
-                    text2 = data2.get("text") or data2.get("generated_text") or data2.get("output") or ""
-                    if text2:
-                        return {"text": text2, "mode": "live", "model": self.model}
-            except Exception:
-                pass
+        try:
+            config = types.GenerateContentConfig(
+                system_instruction=system or None,
+                max_output_tokens=max_tokens,
+                temperature=temperature,
+                http_options=types.HttpOptions(
+                    timeout=int(self.timeout * 1000)
+                ),
+            )
 
-        # Fallback to mock with clear labelling
-        return {
-            "text": self._mock_text(prompt, system) + "\n\n[Note: live Gemma call failed; returned mock output.]",
-            "mode": "mock",
-            "model": f"{self.model} (mock-fallback)",
-        }
+            response = await self.client.aio.models.generate_content(
+                model=self.model,
+                contents=prompt,
+                config=config,
+            )
 
-    def _mock_text(self, prompt: str, system: str | None) -> str:
-        header = "[MOCK Gemma output — no live inference; configure GEMMA_API_KEY and GEMMA_API_BASE to enable live mode]\n"
-        # Deterministic, prompt-aware mock
+           
+            generated_text = getattr(response, "text", None)
+
+            if not generated_text or not generated_text.strip():
+                print("Gemma returned no text. Raw response:", response)
+                raise RuntimeError("Gemma returned an empty response.")
+
+            return {
+                "text": generated_text,
+                "mode": "live",
+                "model": self.model,
+            }
+
+        except Exception as exc:
+            # Keep failures visible instead of pretending the response is live.
+            print(
+                f"Gemma API request failed: "
+                f"{type(exc).__name__}: {exc}"
+            )
+
+            return {
+                "text": (
+                    self._mock_text(prompt, system)
+                    + "\n\n[MOCK FALLBACK: The live Gemma API request "
+                    "failed. Check the backend terminal for details.]"
+                ),
+                "mode": "mock",
+                "model": f"{self.model} (mock-fallback)",
+            }
+
+    def _mock_text(
+        self,
+        prompt: str,
+        system: str | None,
+    ) -> str:
+        """Return a clearly labelled deterministic mock response."""
+
+        header = (
+            "[MOCK OUTPUT — no live Gemma inference. "
+            "Configure the API key and disable mock mode.]"
+        )
+
         snippet = prompt[:400].replace("\n", " ")
-        sys_part = f"System: {system[:120]} | " if system else ""
+        system_part = f"System: {system[:120]} | " if system else ""
+
         return (
-            f"{header}{sys_part}Prompt preview: {snippet}...\n"
-            "This is a deterministic mock explanation. In live mode this would be generated by Gemma "
-            f"({self.model}). Provide API credentials to get real inference."
+            f"{header}\n"
+            f"{system_part}Prompt preview: {snippet}...\n"
+            f"This is a mock explanation, not a real AI response "
+            f"from {self.model}."
         )

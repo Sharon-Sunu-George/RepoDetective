@@ -35,7 +35,7 @@ class Settings(BaseSettings):
     # Gemma / generic LLM provider
     gemma_api_key: str = ""
     gemma_api_base: str = ""  # e.g. https://api.example.com/v1
-    gemma_model: str = "gemma-3-4b-it"
+    gemma_model: str = "gemma-4-26b-a4b-it"
     gemma_timeout_seconds: float = 30.0
     # When True (or when no credentials), use deterministic mock responses
     gemma_mock_mode: bool = True

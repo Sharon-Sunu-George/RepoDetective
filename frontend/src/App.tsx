@@ -782,8 +782,8 @@ export default function App() {
     if (parsed) {
       setRequestedRepository(parsed.fullUrl)
       setParsedRepo({ owner: parsed.owner, repo: parsed.repo })
-      // Page 2: Case Briefing Dossier
-      setScreen("briefing")
+      // Page 2: Detective Office Intro
+      setScreen("intro")
     }
   }
 
@@ -823,9 +823,11 @@ export default function App() {
   if (screen === "intro") {
     return (
       <DetectiveOfficeIntro
-        repoUrl={`${parsedRepo.owner}/${parsedRepo.repo}`}
-        onComplete={() => handleEnterDashboard()}
-        onBack={handleBackToHq}
+        owner={parsedRepo.owner}
+        repo={parsedRepo.repo}
+        repositoryUrl={requestedRepository}
+        onBackToHq={handleBackToHq}
+        onEnterDashboard={handleEnterDashboard}
       />
     )
   }
