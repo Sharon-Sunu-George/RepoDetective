@@ -3,7 +3,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api.routes import agents, health, lessons, repositories
+from app.api.routes import agents, health, lessons, repositories, sarvam
 from app.core.config import settings
 
 app = FastAPI(
@@ -24,6 +24,7 @@ app.include_router(health.router)
 app.include_router(repositories.router)
 app.include_router(lessons.router)
 app.include_router(agents.router)
+app.include_router(sarvam.router)
 
 
 @app.get("/", include_in_schema=False)

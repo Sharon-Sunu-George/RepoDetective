@@ -35,10 +35,20 @@ class Settings(BaseSettings):
     # Gemma / generic LLM provider
     gemma_api_key: str = ""
     gemma_api_base: str = ""  # e.g. https://api.example.com/v1
-    gemma_model: str = "gemma-4-26b-a4b-it"
+    gemma_model: str = "gemma-3-4b-it"
     gemma_timeout_seconds: float = 30.0
     # When True (or when no credentials), use deterministic mock responses
     gemma_mock_mode: bool = True
+
+    # Sarvam AI Voice Agent (Indus / Samvaad)
+    sarvam_api_key: str = ""
+    sarvam_app_id: str = ""
+    sarvam_workspace_id: str = ""
+    sarvam_org_id: str = ""
+    sarvam_tts_model: str = "bulbul:v4-flash"
+    sarvam_stt_model: str = "saaras:v4"
+    sarvam_api_base: str = "https://api.sarvam.ai"
+    sarvam_timeout_seconds: float = 25.0
 
     # Parser / security limits
     max_files_to_fetch: int = 30
