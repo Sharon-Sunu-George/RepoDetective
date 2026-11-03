@@ -43,11 +43,7 @@ function DetectiveCharacter() {
       className="scene-detective-character detective-is-idle"
       aria-label="Pixel art detective character"
     >
-      <img
-        src="/images/detective-idle-1.png"
-        alt="Pixel art detective character"
-        className="detective-sprite-frame"
-      />
+      <div className="detective-sprite-frame" />
       {/* Magnifying glass sparkle glint */}
       <div className="detective-lens-sparkle" aria-hidden="true">
         <span className="sparkle-star sparkle-star-1" />
@@ -86,7 +82,7 @@ function CrtTerminalScreen({
 
       <div className="crt-terminal-content">
         <div className="crt-term-header">
-          <span className="crt-status-dot">●</span>
+          <span className="crt-status-dot">ΓùÅ</span>
           <span className="crt-term-title">REPO_OS v2.4</span>
           <span className="crt-term-pulse">ONLINE</span>
         </div>
@@ -98,7 +94,7 @@ function CrtTerminalScreen({
 
         <div className="crt-term-meta-row">
           <span className="crt-term-lang">{repoData?.primaryLanguage || "SOURCE"}</span>
-          <span className="crt-term-stars">★{repoData?.stars?.toLocaleString() || "0"}</span>
+          <span className="crt-term-stars">Γÿà{repoData?.stars?.toLocaleString() || "0"}</span>
           <span className="crt-term-branch">{repoData?.defaultBranch || "main"}</span>
         </div>
 
@@ -114,7 +110,7 @@ function CrtTerminalScreen({
               key={item.name}
               className={`crt-file-line ${idx === (activeFileIndex % 3) ? "crt-file-active" : ""}`}
             >
-              <span className="crt-tree-icon">{item.type === "dir" ? "📁" : "📄"}</span>
+              <span className="crt-tree-icon">{item.type === "dir" ? "≡ƒôü" : "≡ƒôä"}</span>
               <span className="crt-file-name">{item.name}</span>
               <span className="crt-file-role">[{item.role.slice(0, 8)}]</span>
             </div>
@@ -177,7 +173,7 @@ function LeftHudPanel({
 
             <div className="hud-card-header">
               <div className="hud-card-title-group">
-                <span className="hud-card-icon">📁</span>
+                <span className="hud-card-icon">≡ƒôü</span>
                 <span className="hud-card-title">CASE FILE</span>
                 <span className="hud-card-slashes">///</span>
               </div>
@@ -188,7 +184,7 @@ function LeftHudPanel({
                 aria-label="Close Case File Panel"
                 type="button"
               >
-                ✕
+                Γ£ò
               </button>
             </div>
 
@@ -203,7 +199,7 @@ function LeftHudPanel({
                     title="Copy repository slug"
                     type="button"
                   >
-                    {copied ? "COPIED" : "📋"}
+                    {copied ? "COPIED" : "≡ƒôï"}
                   </button>
                 </div>
               </div>
@@ -231,7 +227,7 @@ function LeftHudPanel({
 
             <div className="hud-card-header">
               <div className="hud-card-title-group">
-                <span className="hud-card-icon">📄</span>
+                <span className="hud-card-icon">≡ƒôä</span>
                 <span className="hud-card-title">QUICK READ</span>
                 <span className="hud-card-slashes">///</span>
               </div>
@@ -248,7 +244,7 @@ function LeftHudPanel({
                 title="View full README on GitHub"
                 type="button"
               >
-                VIEW README →
+                VIEW README ΓåÆ
               </button>
             </div>
           </div>
@@ -262,7 +258,7 @@ function LeftHudPanel({
 
             <div className="hud-card-header">
               <div className="hud-card-title-group">
-                <span className="hud-card-icon">🔑</span>
+                <span className="hud-card-icon">≡ƒöæ</span>
                 <span className="hud-card-title">KEY FILES</span>
                 <span className="hud-card-slashes">///</span>
               </div>
@@ -271,7 +267,7 @@ function LeftHudPanel({
             <div className="hud-files-list">
               {data.structureMap?.slice(0, 5).map((file) => (
                 <div key={file.name} className="hud-file-item">
-                  <span className="hud-file-ico">{file.type === "dir" ? "📁" : "📄"}</span>
+                  <span className="hud-file-ico">{file.type === "dir" ? "≡ƒôü" : "≡ƒôä"}</span>
                   <span className="hud-file-txt">{file.name}</span>
                 </div>
               ))}
@@ -316,7 +312,7 @@ function RightHudPanel({
 
             <div className="hud-card-header">
               <div className="hud-card-title-group">
-                <span className="hud-card-icon">📊</span>
+                <span className="hud-card-icon">≡ƒôè</span>
                 <span className="hud-card-title">LANGUAGES</span>
                 <span className="hud-card-slashes">///</span>
               </div>
@@ -327,40 +323,28 @@ function RightHudPanel({
                 aria-label="Close Telemetry Panel"
                 type="button"
               >
-                ✕
+                Γ£ò
               </button>
             </div>
 
             <div className="hud-languages-list">
-              {data.languages && data.languages.length > 0 ? (
-                data.languages.map((lang) => (
-                  <div key={lang.name} className="hud-lang-row">
-                    <div className="hud-lang-meta">
-                      <span className="hud-lang-name">{lang.name}</span>
-                      <span className="hud-lang-pct">{lang.percentage.toFixed(1)}%</span>
-                    </div>
-                    <div className="hud-lang-track">
-                      <div
-                        className="hud-lang-bar"
-                        style={{
-                          width: `${Math.min(100, lang.percentage)}%`,
-                          backgroundColor: lang.color || "#38bdf8",
-                        }}
-                      />
-                    </div>
-                  </div>
-                ))
-              ) : (
-                <div className="hud-lang-row">
+              {data.languages?.map((lang) => (
+                <div key={lang.name} className="hud-lang-row">
                   <div className="hud-lang-meta">
-                    <span className="hud-lang-name">{data.primaryLanguage || "JavaScript"}</span>
-                    <span className="hud-lang-pct">Primary</span>
+                    <span className="hud-lang-name">{lang.name}</span>
+                    <span className="hud-lang-pct">{lang.percentage.toFixed(1)}%</span>
                   </div>
                   <div className="hud-lang-track">
-                    <div className="hud-lang-bar" style={{ width: "100%", backgroundColor: "#facc15" }} />
+                    <div
+                      className="hud-lang-bar"
+                      style={{
+                        width: `${Math.min(100, lang.percentage)}%`,
+                        backgroundColor: lang.color || "#38bdf8",
+                      }}
+                    />
                   </div>
                 </div>
-              )}
+              ))}
             </div>
           </div>
 
@@ -380,31 +364,19 @@ function RightHudPanel({
             </div>
 
             <div className="hud-tech-list">
-              {data.techStack && data.techStack.length > 0 ? (
-                data.techStack.map((tech) => (
-                  <div key={tech.name} className="hud-tech-row">
-                    <div className="hud-tech-left">
-                      <span className={`hud-tech-icon-badge hud-badge-${tech.badge.toLowerCase()}`}>
-                        {tech.badge}
-                      </span>
-                      <span className="hud-tech-name">{tech.name}</span>
-                    </div>
-                    <span className={`hud-tech-tag ${tech.isPrimary ? "hud-tag-primary" : "hud-tag-detected"}`}>
-                      {tech.tag}
-                    </span>
-                  </div>
-                ))
-              ) : (
-                <div className="hud-tech-row">
+              {data.techStack?.map((tech) => (
+                <div key={tech.name} className="hud-tech-row">
                   <div className="hud-tech-left">
-                    <span className="hud-tech-icon-badge hud-badge-js">
-                      {(data.primaryLanguage || "JS").slice(0, 3).toUpperCase()}
+                    <span className={`hud-tech-icon-badge hud-badge-${tech.badge.toLowerCase()}`}>
+                      {tech.badge}
                     </span>
-                    <span className="hud-tech-name">{data.primaryLanguage || "JavaScript"}</span>
+                    <span className="hud-tech-name">{tech.name}</span>
                   </div>
-                  <span className="hud-tech-tag hud-tag-primary">PRIMARY</span>
+                  <span className={`hud-tech-tag ${tech.isPrimary ? "hud-tag-primary" : "hud-tag-detected"}`}>
+                    {tech.tag}
+                  </span>
                 </div>
-              )}
+              ))}
             </div>
           </div>
 
@@ -417,7 +389,7 @@ function RightHudPanel({
 
             <div className="hud-card-header">
               <div className="hud-card-title-group">
-                <span className="hud-card-icon">📈</span>
+                <span className="hud-card-icon">≡ƒôê</span>
                 <span className="hud-card-title">REPOSITORY STATS</span>
                 <span className="hud-card-slashes">///</span>
               </div>
@@ -425,28 +397,28 @@ function RightHudPanel({
 
             <div className="hud-stats-grid">
               <div className="hud-stat-cell">
-                <span className="hud-stat-icon stat-icon-gold">★</span>
+                <span className="hud-stat-icon stat-icon-gold">Γÿà</span>
                 <div className="hud-stat-info">
                   <span className="hud-stat-val">{formatNumber(data.stars)}</span>
                   <span className="hud-stat-lbl">Stars</span>
                 </div>
               </div>
               <div className="hud-stat-cell">
-                <span className="hud-stat-icon">⏱</span>
+                <span className="hud-stat-icon">ΓÅ▒</span>
                 <div className="hud-stat-info">
                   <span className="hud-stat-val">{data.openIssues}</span>
                   <span className="hud-stat-lbl">Open Issues</span>
                 </div>
               </div>
               <div className="hud-stat-cell">
-                <span className="hud-stat-icon">🍴</span>
+                <span className="hud-stat-icon">≡ƒì┤</span>
                 <div className="hud-stat-info">
                   <span className="hud-stat-val">{formatNumber(data.forks)}</span>
                   <span className="hud-stat-lbl">Forks</span>
                 </div>
               </div>
               <div className="hud-stat-cell">
-                <span className="hud-stat-icon">👥</span>
+                <span className="hud-stat-icon">≡ƒæÑ</span>
                 <div className="hud-stat-info">
                   <span className="hud-stat-val">{data.contributorsCount}</span>
                   <span className="hud-stat-lbl">Contributors</span>
@@ -464,7 +436,7 @@ function RightHudPanel({
 
             <div className="hud-card-header">
               <div className="hud-card-title-group">
-                <span className="hud-card-icon">🕒</span>
+                <span className="hud-card-icon">≡ƒòÆ</span>
                 <span className="hud-card-title">RECENT ACTIVITY</span>
                 <span className="hud-card-slashes">///</span>
               </div>
@@ -703,9 +675,9 @@ export function DetectiveOfficeIntro({
           aria-expanded={false}
           type="button"
         >
-          <span className="hud-tab-icon">📁</span>
+          <span className="hud-tab-icon">≡ƒôü</span>
           <span className="hud-tab-label">CASE FILE</span>
-          <span className="hud-tab-arrow">▶</span>
+          <span className="hud-tab-arrow">Γû╢</span>
         </button>
       )}
 
@@ -717,8 +689,8 @@ export function DetectiveOfficeIntro({
           aria-expanded={false}
           type="button"
         >
-          <span className="hud-tab-arrow">◀</span>
-          <span className="hud-tab-icon">📊</span>
+          <span className="hud-tab-arrow">ΓùÇ</span>
+          <span className="hud-tab-icon">≡ƒôè</span>
           <span className="hud-tab-label">INTEL</span>
         </button>
       )}
@@ -817,7 +789,7 @@ export function DetectiveOfficeIntro({
                         {loading ? (
                           <div className="rpg-loading-state">
                             <p className="rpg-p">
-                              “Examining case manifests for <b>{owner}/{repo}</b>. Gathering initial intel…”
+                              ΓÇ£Examining case manifests for <b>{owner}/{repo}</b>. Gathering initial intelΓÇªΓÇ¥
                             </p>
                             <div className="loading-radar-dots">
                               <span className="dot dot-1" />
@@ -828,7 +800,7 @@ export function DetectiveOfficeIntro({
                         ) : error ? (
                           <div className="rpg-error-state">
                             <p className="rpg-p text-coral">
-                              “Case file access blocked. {error} Let's try another approach.”
+                              ΓÇ£Case file access blocked. {error} Let's try another approach.ΓÇ¥
                             </p>
                             <div className="error-actions-row" onClick={(e) => e.stopPropagation()}>
                               <Button className="button--primary btn-sm" onClick={() => loadRepoData(owner, repo)}>
@@ -850,7 +822,7 @@ export function DetectiveOfficeIntro({
                             <p className="rpg-p">
                               <span className="rpg-typed-text">{currentScreen.text.slice(0, charCount)}</span>
                               <span className="rpg-untyped-text" aria-hidden="true">{currentScreen.text.slice(charCount)}</span>
-                              {isTyping && <span className="rpg-typewriter-cursor">▌</span>}
+                              {isTyping && <span className="rpg-typewriter-cursor">Γûî</span>}
                             </p>
                           </div>
                         )}
@@ -876,7 +848,7 @@ export function DetectiveOfficeIntro({
                               </Button>
                             ) : (
                               <Button className="button--secondary rpg-continue-btn" onClick={handleDialogueClick}>
-                                {isTyping ? "REVEAL ALL" : "CONTINUE"} <span className="rpg-cyan-diamond">♦</span>
+                                {isTyping ? "REVEAL ALL" : "CONTINUE"} <span className="rpg-cyan-diamond">ΓÖª</span>
                               </Button>
                             )}
                           </div>

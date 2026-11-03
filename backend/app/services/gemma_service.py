@@ -29,6 +29,7 @@ class GemmaService:
         self.api_key = (
             api_key if api_key is not None else settings.gemma_api_key
         )
+        self.api_base = (api_base if api_base is not None else (settings.gemma_api_base or '')).rstrip('/')
         self.model = model or settings.gemma_model
         self.timeout = (
             timeout
@@ -101,7 +102,22 @@ class GemmaService:
                     }
                 except Exception as exc:
                     last_exc = exc
-                    if attempt == 0 and "500" in str(exc):
+                    # Retry transient network errors, timeouts, connection resets and HTTP 500/502/503/504
+                    err_str = str(exc).lower()
+                    is_transient = any(
+                        term in err_str
+                        for term in [
+                            "500", "502", "503", "504",
+                            "timeout", "timed out", "connection reset", "connection refused",
+                            "econnreset", "remote disconnected", "network"
+                        ]
+                    )
+                    # Never retry permanent authentication or validation errors
+                    is_permanent = any(
+                        term in err_str
+                        for term in ["400", "401", "403", "invalid api key", "api_key_invalid", "unauthenticated", "permission_denied"]
+                    )
+                    if attempt == 0 and is_transient and not is_permanent:
                         await asyncio.sleep(0.5)
                         continue
                     break

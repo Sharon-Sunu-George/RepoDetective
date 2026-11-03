@@ -115,6 +115,7 @@ async def converse_with_sarvam_agent(payload: ConverseRequest):
 
     # First attempt: Use connected Live LLM (Gemini/Gemma service) with conversational context
     answer = ""
+    mode = "deterministic-fallback"
     try:
         from app.services.gemma_service import GemmaService
         gemma = GemmaService()
@@ -135,7 +136,8 @@ async def converse_with_sarvam_agent(payload: ConverseRequest):
 
         llm_res = await gemma.generate(prompt=prompt, system=system_instruction, max_tokens=150)
         generated_text = llm_res.get("text", "").strip()
-        if generated_text and not generated_text.startswith("[MOCK OUTPUT"):
+        if generated_text and not generated_text.startswith("[MOCK OUTPUT") and llm_res.get("mode") == "live":
+            mode = "gemini-live"
             answer = generated_text
     except Exception as e:
         logger.warning(f"Live converse generation failed, trying Sarvam direct chat: {e}")
@@ -172,6 +174,8 @@ async def converse_with_sarvam_agent(payload: ConverseRequest):
                 if res.status_code == 200:
                     data = res.json()
                     answer = data.get("choices", [{}])[0].get("message", {}).get("content", "")
+                    if answer:
+                        mode = "sarvam-live"
         except Exception as err:
             logger.warning(f"Sarvam direct chat endpoint error: {err}")
 
@@ -207,7 +211,7 @@ async def converse_with_sarvam_agent(payload: ConverseRequest):
         language_code=payload.language_code,
         agent_id=settings.sarvam_app_id or "Conversatio-6103dad4-f01f",
         audio_base64=audio_b64,
-        mode="sarvam-live" if has_key else "conversational-live",
+        mode=mode,
     )
 
 
@@ -295,6 +299,14 @@ class STTRequest(BaseModel):
 @router.post("/stt")
 async def speech_to_text_proxy(payload: STTRequest):
     """Secure proxy for Sarvam Saaras Speech-to-Text without exposing API keys."""
+    # Enforce strict audio payload size limit (max 10MB base64 string ~ 7.5MB raw audio) before any processing or decoding
+    MAX_AUDIO_BASE64_CHARS = 10 * 1024 * 1024  # 10 MB character limit
+    if len(payload.audio_base64) > MAX_AUDIO_BASE64_CHARS:
+        raise HTTPException(
+            status_code=413,
+            detail=f"Audio payload exceeds maximum size limit of {MAX_AUDIO_BASE64_CHARS // (1024*1024)}MB."
+        )
+
     if not (settings.sarvam_api_key and settings.sarvam_api_key.strip()):
         raise HTTPException(
             status_code=400,

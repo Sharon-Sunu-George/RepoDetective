@@ -16,6 +16,7 @@ import {
 import { PixelDetectiveSprite } from "./PixelDetectiveSprite"
 import { RepositoryGameMap } from "./RepositoryGameMap"
 import { DetectiveChatPage } from "./DetectiveChatPage"
+import { SarvamVoiceAgent } from "./SarvamVoiceAgent"
 
 interface DetectiveDashboardProps {
   initialRepo?: string
@@ -29,7 +30,7 @@ export function DetectiveDashboard({
   onBackToLanding,
 }: DetectiveDashboardProps) {
   const [currentRepo, setCurrentRepo] = useState(initialRepo)
-  const [activeNav, setActiveNav] = useState<"overview" | "map" | "questions" | "explorer" | "insights" | "notes">("overview")
+  const [activeNav, setActiveNav] = useState<"overview" | "map" | "questions" | "voice" | "explorer" | "insights" | "notes">("overview")
   const [chatInitialPrompt, setChatInitialPrompt] = useState<string | undefined>(undefined)
   const [repoDropdownOpen, setRepoDropdownOpen] = useState(false)
   const [repoInputVal, setRepoInputVal] = useState(initialRepo)
@@ -524,7 +525,24 @@ export function DetectiveDashboard({
                 <line x1="12" y1="10" x2="12.01" y2="10" strokeWidth="3" />
                 <line x1="15" y1="10" x2="15.01" y2="10" strokeWidth="3" />
               </svg>
-              <span>Ask Questions</span>
+              <span>AI Teaching Agent</span>
+            </button>
+
+            <button
+              className={`cyber-nav-item ${activeNav === "voice" ? "active" : ""}`}
+              onClick={() => {
+                setActiveNav("voice")
+                setActiveTabModal(null)
+              }}
+              type="button"
+            >
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
+                <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+                <line x1="12" y1="19" x2="12" y2="23" />
+                <line x1="8" y1="23" x2="16" y2="23" />
+              </svg>
+              <span>Voice AI Agent</span>
             </button>
 
             <button
@@ -601,6 +619,13 @@ export function DetectiveDashboard({
             initialPrompt={chatInitialPrompt}
             onBackToOverview={() => setActiveNav("overview")}
           />
+        ) : activeNav === "voice" ? (
+          <SarvamVoiceAgent
+            currentRepo={currentRepo}
+            repoData={repoData}
+            treeEntries={treeEntries}
+            onBackToOverview={() => setActiveNav("overview")}
+          />
         ) : (
           <main className="cyber-dash-content">
             <div className="cyber-workspace-grid">
@@ -670,7 +695,29 @@ export function DetectiveDashboard({
                         <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
                       </svg>
                     </div>
-                    <span>Ask Questions</span>
+                    <span>AI Teaching Agent</span>
+                  </div>
+                  <span className="cyber-action-arrow">&gt;</span>
+                </button>
+
+                <button
+                  className="cyber-action-button"
+                  onClick={() => {
+                    setActiveNav("voice")
+                    setActiveTabModal(null)
+                  }}
+                  type="button"
+                >
+                  <div className="cyber-action-btn-left">
+                    <div className="cyber-action-icon-box">
+                      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
+                        <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+                        <line x1="12" y1="19" x2="12" y2="23" />
+                        <line x1="8" y1="23" x2="16" y2="23" />
+                      </svg>
+                    </div>
+                    <span>Talk to Sarvam AI</span>
                   </div>
                   <span className="cyber-action-arrow">&gt;</span>
                 </button>
@@ -931,7 +978,7 @@ export function DetectiveDashboard({
             <div className="cyber-modal-header">
               <span className="cyber-modal-title">
                 {activeTabModal === "map" && "REPOSITORY MAP — ARCHITECTURE HIERARCHY"}
-                {activeTabModal === "questions" && "ASK QUESTIONS — INVESTIGATIVE AGENT"}
+                {activeTabModal === "questions" && "AI TEACHING AGENT — INVESTIGATIVE COPILOT"}
                 {activeTabModal === "explorer" && `FILE EXPLORER — ${currentRepo}`}
                 {activeTabModal === "insights" && `SUMMARY & INSIGHTS — ${currentRepo}`}
                 {activeTabModal === "notes" && `CASE FIELD NOTES — ${currentRepo}`}
@@ -1306,7 +1353,8 @@ export function DetectiveDashboard({
                   <ul style={{ paddingLeft: "18px", lineHeight: "1.7" }}>
                     <li><b>Overview:</b> Real-time statistics, description, and primary language directly from GitHub.</li>
                     <li><b>Repository Map:</b> Folder hierarchy with identified roles (Entry Point, Manifest, Test Suite).</li>
-                    <li><b>Ask Questions:</b> AI detective answering architectural questions with file citations.</li>
+                    <li><b>AI Teaching Agent:</b> AI detective answering architectural questions with file citations.</li>
+                    <li><b>Voice AI Agent:</b> Voice interrogation using Sarvam AI speech engine.</li>
                     <li><b>File Explorer:</b> Browse files, expand directories, and inspect syntax-highlighted source code.</li>
                     <li><b>Summary &amp; Insights:</b> Structured breakdown of project purpose, problems solved, and tech stack.</li>
                     <li><b>Notes:</b> Create, edit, and persist case notes associated with each repository.</li>

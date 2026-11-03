@@ -1,7 +1,7 @@
 import { useState, type ReactNode } from "react"
 import { parseGitHubUrl } from "./repoService"
-import { CaseBriefing } from "./CaseBriefing"
 import { DetectiveOfficeIntro } from "./DetectiveOfficeIntro"
+import { LandingExact } from "./LandingExact"
 
 export type IconName = "arrow" | "branch" | "check" | "chevron" | "file" | "folder" | "github" | "map" | "search" | "spark" | "terminal"
 
@@ -313,93 +313,13 @@ const steps = [
 ]
 
 function Landing({ onStart }: { onStart: (repository: string) => void }) {
-  const [repo, setRepo] = useState("https://github.com/vercel/ms")
-  const [inputError, setInputError] = useState<string | null>(null)
-
-  const handleSubmit = (event: React.FormEvent) => {
-    event.preventDefault()
-    const parsed = parseGitHubUrl(repo)
-    if (!parsed) {
-      setInputError("PLEASE ENTER A VALID GITHUB URL (e.g. https://github.com/owner/repository or owner/repository)")
-      return
-    }
-    setInputError(null)
-    onStart(parsed.fullUrl)
-  }
-
   return (
-    <main className="landing">
-      <nav className="nav shell">
-        <Logo compact />
-        <div className="nav-links">
-          <span>HOW IT WORKS</span>
-          <span>FIELD NOTES</span>
-          <Button className="button--quiet" onClick={() => onStart(repo)}>
-            <Icon name="github" /> OPEN DEMO
-          </Button>
-        </div>
-      </nav>
+    <main className="landing-root">
+      {/* Reference Screenshot Pixel-Perfect Landing Hero Viewport */}
+      <LandingExact onStart={onStart} />
 
-      <section className="hero shell">
-        <div className="hero-copy">
-          <div className="eyebrow">
-            <span className="status-dot" /> CASE FILES FOR CURIOUS CODERS
-          </div>
-          <div className="hero-title">
-            EVERY CODEBASE
-            <br />
-            HAS A <em>STORY.</em>
-          </div>
-          <p className="hero-description">
-            Investigate real GitHub repositories. Follow the clues, understand
-            how code connects, and get ready to make your first contribution.
-          </p>
-          <form className="repo-form" onSubmit={handleSubmit}>
-            <label className="repo-label" htmlFor="repository">
-              START WITH A GITHUB REPOSITORY
-            </label>
-            <div className={`repo-input-wrap ${inputError ? "has-error" : ""}`}>
-              <Icon name="github" size={20} />
-              <input
-                aria-describedby={inputError ? "repo-error-pill" : "prototype-note"}
-                id="repository"
-                onChange={(event) => {
-                  setRepo(event.target.value)
-                  if (inputError) setInputError(null)
-                }}
-                placeholder="https://github.com/owner/repository"
-                value={repo}
-              />
-              <Button className="button--primary" type="submit">
-                START INVESTIGATION <Icon name="arrow" />
-              </Button>
-            </div>
-            {inputError && (
-              <div className="repo-error-pill" id="repo-error-pill" role="alert">
-                <span className="status-dot error-dot" />
-                <span>{inputError}</span>
-              </div>
-            )}
-          </form>
-          <div className="prototype-note" id="prototype-note" role="status">
-            <Icon name="spark" size={14} />
-            <span>
-              <b>PROTOTYPE PREVIEW</b> Opens a guided sample case. Live
-              repository analysis is coming soon.
-            </span>
-          </div>
-          <div className="trust-line">
-            <span>NO SETUP REQUIRED</span>
-            <span>REAL OPEN-SOURCE CODE</span>
-            <span>BEGINNER FRIENDLY</span>
-          </div>
-        </div>
-        <div className="hero-art">
-          <RepositoryScene />
-        </div>
-      </section>
-
-      <section className="steps-section shell">
+      {/* Protocol & Footer Sections */}
+      <section className="steps-section shell" id="protocol-section">
         <div className="section-heading">
           <div>
             <div className="eyebrow">YOUR INVESTIGATION PROTOCOL</div>
@@ -760,13 +680,13 @@ function Workspace({
 
 import { DetectiveDashboard } from "./DetectiveDashboard"
 
-type Screen = "landing" | "briefing" | "intro" | "dashboard" | "workspace"
+type Screen = "landing" | "intro" | "dashboard" | "workspace"
 
 export default function App() {
   const initialScreen = () => {
     if (typeof window !== "undefined") {
       const p = new URLSearchParams(window.location.search).get("screen")
-      if (p === "dashboard" || p === "briefing" || p === "intro" || p === "workspace") return p as Screen
+      if (p === "dashboard" || p === "intro" || p === "workspace") return p as Screen
     }
     return "landing"
   }
@@ -782,7 +702,7 @@ export default function App() {
     if (parsed) {
       setRequestedRepository(parsed.fullUrl)
       setParsedRepo({ owner: parsed.owner, repo: parsed.repo })
-      // Page 2: Detective Office Intro
+      // Direct flow into Detective Office investigation
       setScreen("intro")
     }
   }
@@ -798,25 +718,13 @@ export default function App() {
 
   const handleEnterDashboard = (repoUrl?: string) => {
     if (repoUrl) setRequestedRepository(repoUrl)
-    // Page 3: Pixel-Accurate Cyber Detective Dashboard
+    // Pixel-Accurate Cyber Detective Dashboard
     setScreen("dashboard")
   }
 
-  // Screen 1: Landing Page
+  // Screen 1: Landing Page (homepage)
   if (screen === "landing") {
     return <Landing onStart={startInvestigation} />
-  }
-
-  // Screen 2: Case Briefing Dossier (What is this project, structure, field manual)
-  if (screen === "briefing") {
-    return (
-      <CaseBriefing
-        owner={parsedRepo.owner}
-        repo={parsedRepo.repo}
-        onBack={handleBackToHq}
-        onBeginLearning={handleBeginLearning}
-      />
-    )
   }
 
   // Transition Cutscene: Detective Office Intro with RPG dialogue
