@@ -3,12 +3,16 @@
 
 from __future__ import annotations
 
+import asyncio
+import logging
 from typing import Any
 
 from google import genai
 from google.genai import types
 
 from app.core.config import settings
+
+logger = logging.getLogger(__name__)
 
 
 class GemmaService:
@@ -66,40 +70,54 @@ class GemmaService:
                 "model": f"{self.model} (mock)",
             }
 
+        config = types.GenerateContentConfig(
+            system_instruction=system or None,
+            max_output_tokens=max_tokens,
+            temperature=temperature,
+            http_options=types.HttpOptions(
+                timeout=int(self.timeout * 1000)
+            ),
+        )
+
         try:
-            config = types.GenerateContentConfig(
-                system_instruction=system or None,
-                max_output_tokens=max_tokens,
-                temperature=temperature,
-                http_options=types.HttpOptions(
-                    timeout=int(self.timeout * 1000)
-                ),
-            )
+            # Attempt generation with 1 immediate retry for transient 500/network glitches
+            last_exc: Exception | None = None
+            for attempt in range(2):
+                try:
+                    response = await self.client.aio.models.generate_content(
+                        model=self.model,
+                        contents=prompt,
+                        config=config,
+                    )
 
-            response = await self.client.aio.models.generate_content(
-                model=self.model,
-                contents=prompt,
-                config=config,
-            )
+                    generated_text = getattr(response, "text", None)
+                    if not generated_text or not generated_text.strip():
+                        raise RuntimeError("Gemma returned an empty response.")
 
-           
-            generated_text = getattr(response, "text", None)
+                    return {
+                        "text": generated_text,
+                        "mode": "live",
+                        "model": self.model,
+                    }
+                except Exception as exc:
+                    last_exc = exc
+                    if attempt == 0 and "500" in str(exc):
+                        await asyncio.sleep(0.5)
+                        continue
+                    break
 
-            if not generated_text or not generated_text.strip():
-                print("Gemma returned no text. Raw response:", response)
-                raise RuntimeError("Gemma returned an empty response.")
-
-            return {
-                "text": generated_text,
-                "mode": "live",
-                "model": self.model,
-            }
+            if last_exc is not None:
+                raise last_exc
 
         except Exception as exc:
             # Keep failures visible instead of pretending the response is live.
-            print(
-                f"Gemma API request failed: "
-                f"{type(exc).__name__}: {exc}"
+            err_msg = str(exc)
+            if self.api_key:
+                err_msg = err_msg.replace(self.api_key, "[REDACTED_API_KEY]")
+            logger.error(
+                "Gemma API request failed: %s: %s",
+                type(exc).__name__,
+                err_msg,
             )
 
             return {
