@@ -52,6 +52,13 @@ export function SarvamVoiceAgent({
   const transcriptEndRef = useRef<HTMLDivElement>(null)
   const currentAudioRef = useRef<HTMLAudioElement | null>(null)
 
+  // Keep live mutable refs to avoid stale closures in SpeechRecognition callbacks
+  const sarvamStatusRef = useRef(sarvamStatus)
+  sarvamStatusRef.current = sarvamStatus
+
+  const transcriptsRef = useRef(transcripts)
+  transcriptsRef.current = transcripts
+
   // Fetch Sarvam Agent configuration status from backend on mount
   useEffect(() => {
     let isMounted = true
@@ -121,7 +128,7 @@ export function SarvamVoiceAgent({
 
       recognition.onend = () => {
         setIsListening(false)
-        if (sarvamStatus === "listening") {
+        if (sarvamStatusRef.current === "listening") {
           setSarvamStatus("idle")
         }
       }
@@ -133,7 +140,20 @@ export function SarvamVoiceAgent({
       try {
         recognitionRef.current?.stop()
       } catch {}
-      stopSpeaking()
+      if (currentAudioRef.current) {
+        try {
+          currentAudioRef.current.pause()
+          currentAudioRef.current.currentTime = 0
+        } catch {}
+        currentAudioRef.current = null
+      }
+      if (typeof window !== "undefined" && "speechSynthesis" in window) {
+        window.speechSynthesis.cancel()
+      }
+      setIsSpeaking(false)
+      if (sarvamStatusRef.current === "speaking" || sarvamStatusRef.current === "listening") {
+        setSarvamStatus("idle")
+      }
     }
   }, [selectedLanguage, currentRepo])
 
@@ -183,7 +203,7 @@ export function SarvamVoiceAgent({
         primaryFiles: treeEntries.slice(0, 8).map((f) => f.path),
       }
 
-      const historyContext = transcripts.slice(-6).map((t) => ({
+      const historyContext = transcriptsRef.current.slice(-6).map((t) => ({
         speaker: t.speaker,
         text: t.text,
       }))
@@ -307,20 +327,27 @@ export function SarvamVoiceAgent({
     }
   }
 
-  // Handle replaying audio for a message
+  // Handle replaying audio for a message with error handling and immutable state updates
   const handleReplayMessage = async (item: VoiceTranscriptItem) => {
     if (item.audioBase64) {
       playBase64Audio(item.audioBase64)
-    } else {
-      // Try on-demand TTS via Sarvam backend proxy
+      return
+    }
+
+    try {
       setSarvamStatus("processing")
       const newAudioB64 = await synthesizeSarvamSpeech(item.text, selectedLanguage)
       if (newAudioB64) {
-        item.audioBase64 = newAudioB64
+        setTranscripts((prev) =>
+          prev.map((t) => (t.id === item.id ? { ...t, audioBase64: newAudioB64 } : t))
+        )
         playBase64Audio(newAudioB64)
       } else {
         speakUtterance(item.text)
       }
+    } catch (err) {
+      console.error("Failed to replay message audio:", err)
+      setSarvamStatus("idle")
     }
   }
 
