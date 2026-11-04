@@ -99,26 +99,100 @@ async def ask_question(body: AskQuestionRequest) -> dict:
     parsed = parser.parse(bundle)
 
     gemma = GemmaService()
-    prompt = (
-        f"You are RepoDetective AI assistant answering a user's question about the repository {owner}/{repo}.\n"
-        f"Primary language: {next(iter(parsed.get('languages', {})), 'Unknown')}\n"
-        f"Important files: {', '.join(parsed.get('important_files', [])[:10])}\n"
-        f"Entry points: {', '.join(parsed.get('entry_points', []))}\n"
-        f"Question: {body.question}\n\n"
-        f"Answer clearly and factually. Reference specific files if relevant."
-    )
-    res = await gemma.generate(prompt=prompt, system="You are an expert software developer and repository detective.")
 
-    # Match evidence files
-    matched_files = [f for f in parsed.get("important_files", []) if any(part in f.lower() for part in body.question.lower().split())]
+    # Build rich repository context for accurate grounding
+    readme_snippet = (parsed.get("readme") or "")[:4000]
+    file_contents = parsed.get("file_contents", {})
+
+    # Key config and manifest files
+    manifest_snippets = []
+    for manifest_name in ["package.json", "requirements.txt", "pyproject.toml", "Cargo.toml", "go.mod", "pom.xml", "build.gradle"]:
+        for fpath, fcontent in file_contents.items():
+            if fpath.lower().endswith(manifest_name.lower()):
+                manifest_snippets.append(f"--- {fpath} ---\n{fcontent[:2000]}")
+
+    # Top important source files (first 3)
+    sample_files = []
+    for fpath, fcontent in list(file_contents.items())[:5]:
+        if not any(fpath.lower().endswith(m) for m in ["package.json", "requirements.txt", "readme.md"]):
+            sample_files.append(f"--- {fpath} ---\n{fcontent[:1500]}")
+
+    # Directory tree sample
+    tree_list = [item["path"] for item in (parsed.get("directory_tree") or [])[:60] if item.get("path")]
+
+    # Format chat history for context continuity
+    history_lines = []
+    if body.chat_history:
+        for turn in body.chat_history[-6:]:
+            role = "User" if turn.get("role") in ("user", "human") else "Detective"
+            msg_text = turn.get("text") or turn.get("content") or ""
+            if msg_text:
+                history_lines.append(f"{role}: {msg_text}")
+    history_context = "\n".join(history_lines)
+
+    system_instruction = (
+        "You are RepoDetective's AI Teaching Agent — an elite technical investigator and coding educator. "
+        "Your mission is to examine repositories thoroughly and explain their architecture, frameworks, "
+        "entry points, dependencies, and file relationships to students and developers.\n\n"
+        "Grounding Rules:\n"
+        "1. Strictly ground your answers in the provided repository evidence (files, tree, manifests, README).\n"
+        "2. State concrete file names, function names, and dependencies as evidence.\n"
+        "3. Never guess, invent, or hallucinate non-existent files or architectures.\n"
+        "4. If a user asks about previous answers or follow-up details, use the conversation history.\n"
+        "5. Explain technical concepts in clear, beginner-friendly terms with detective flair."
+    )
+
+    prompt = (
+        f"REPOSITORY INVESTIGATION REPORT:\n"
+        f"Repository: {owner}/{repo}\n"
+        f"Description: {parsed.get('metadata', {}).get('description') or 'No description provided'}\n"
+        f"Languages: {', '.join([f'{k}: {v}' for k, v in parsed.get('languages', {}).items()])}\n"
+        f"Entry Points: {', '.join(parsed.get('entry_points', [])) or 'None detected'}\n"
+        f"Important Files: {', '.join(parsed.get('important_files', []))}\n"
+        f"Directory Tree (sample):\n{', '.join(tree_list[:40])}\n\n"
+    )
+
+    if manifest_snippets:
+        prompt += f"DEPENDENCY MANIFEST EVIDENCE:\n" + "\n\n".join(manifest_snippets[:3]) + "\n\n"
+
+    if readme_snippet:
+        prompt += f"README EXCERPT:\n{readme_snippet[:2500]}\n\n"
+
+    if sample_files:
+        prompt += f"KEY SOURCE CODE SAMPLES:\n" + "\n\n".join(sample_files[:3]) + "\n\n"
+
+    if history_context:
+        prompt += f"CONVERSATION HISTORY:\n{history_context}\n\n"
+
+    prompt += (
+        f"CURRENT INVESTIGATION QUESTION:\n{body.question}\n\n"
+        f"Respond with a factual, helpful explanation citing evidence files where appropriate."
+    )
+
+    res = await gemma.generate(prompt=prompt, system=system_instruction, max_tokens=1200)
+
+    # Match evidence files from question and answer
+    all_known_files = list(file_contents.keys()) + parsed.get("important_files", [])
+    matched_files = [
+        f for f in all_known_files
+        if any(part in f.lower() for part in body.question.lower().split() if len(part) > 2)
+        or (res.get("text") and f.lower() in res["text"].lower())
+    ]
+    # Deduplicate while preserving order
+    seen = set()
+    deduped_refs = []
+    for f in matched_files + parsed.get("important_files", []):
+        if f not in seen:
+            seen.add(f)
+            deduped_refs.append(f)
 
     return {
         "repository": f"{owner}/{repo}",
         "question": body.question,
         "answer": res.get("text") or "No answer could be generated.",
         "mode": res.get("mode", "mock"),
-        "model": res.get("model", "gemma"),
-        "references": matched_files or parsed.get("important_files", [])[:3],
+        "model": res.get("model", gemma.model),
+        "references": deduped_refs[:5],
     }
 
 @router.post("/file-content", summary="Get specific file content from repository")

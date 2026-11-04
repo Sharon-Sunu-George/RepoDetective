@@ -765,6 +765,7 @@ export function DetectiveDashboard({
 
             {/* 3. CENTER DETECTIVE OFFICE RETRO SCENE ILLUSTRATION */}
             <div className="cyber-center-stage" aria-hidden="true">
+              <div className="cyber-center-stage-scaler">
               {/* Rain Streaks & Neon Glint over the window */}
               <div className="ambient-rain-overlay" aria-hidden="true">
                 <span className="rain-drop d1" />
@@ -820,6 +821,7 @@ export function DetectiveDashboard({
                     </div>
                   </div>
                 </div>
+              </div>
               </div>
             </div>
 
