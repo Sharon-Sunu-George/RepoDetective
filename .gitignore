@@ -147,3 +147,41 @@ vite.config.ts.timestamp-*
 
 # Turbo Repo
 .turbo
+
+# Environment Variables & Secrets
+.env
+*.env
+.env.*
+!.env.example
+backend/.env
+
+# Scratch scripts and temp outputs
+scratch/
+frontend/*.cjs
+frontend/*.json
+frontend/*.png
+frontend/*.html
+frontend/public/images/debug_*
+frontend/public/images/test_*
+frontend/public/images/ref_*
+frontend/public/images/crop_*
+frontend/public/images/landing_bg_*
+frontend/public/images/actual_*
+frontend/public/images/char_*
+frontend/public/images/rendered_*
+frontend/public/images/final_*
+frontend/public/images/headless_*
+frontend/public/images/lamp_*
+frontend/public/images/eye_*
+frontend/public/images/detective_cropped.png
+frontend/public/images/detective_mug_steam1.png
+frontend/public/images/detective_sprite_clean.png
+frontend/public/images/detective_sprite_transparent.png
+frontend/public/images/detective_workspace_fullscene.png
+frontend/public/images/raw_diff_mask.png
+frontend/public/images/retro_*
+frontend/public/images/side_by_side_comparison.png
+frontend/public/images/user_ref_char_crop.png
+frontend/public/inspect_canvas.html
+frontend/public/test_font.html
+

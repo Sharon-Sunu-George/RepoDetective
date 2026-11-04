@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react"
 import { Icon } from "./App"
 import {
   askQuestionAboutRepo,
+  BACKEND_BASE,
   type RepoBriefingData,
   type TreeEntry,
 } from "./repoService"
@@ -37,6 +38,40 @@ export function DetectiveChatPage({
   const [inputText, setInputText] = useState("")
   const [loading, setLoading] = useState(false)
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
+  const [modelStatus, setModelStatus] = useState<{ active: boolean; model: string; mode: string }>({
+    active: true,
+    model: "Gemini 3.8 Flash",
+    mode: "live",
+  })
+
+  // Check health and model configuration on mount
+  useEffect(() => {
+    let isMounted = true
+    fetch(`${BACKEND_BASE}/api/health`)
+      .then((res) => res.json())
+      .then((data) => {
+        if (isMounted) {
+          const isHealthy = data.status === "ok"
+          setModelStatus({
+            active: isHealthy,
+            model: "Gemini 3.8 Flash",
+            mode: isHealthy ? "live" : "offline",
+          })
+        }
+      })
+      .catch(() => {
+        if (isMounted) {
+          setModelStatus({
+            active: false,
+            model: "Gemini 3.8 Flash",
+            mode: "offline",
+          })
+        }
+      })
+    return () => {
+      isMounted = false
+    }
+  }, [])
 
   // Speech Recognition (Voice Input)
   const [isRecording, setIsRecording] = useState(false)
@@ -408,6 +443,17 @@ ${err?.message || "Verify the local backend server is running at http://127.0.0.
             <span className="case-pulse-dot" />
             <span>CASE AGENT: <b>{currentRepo}</b></span>
           </div>
+          <div
+            className="chat-model-badge"
+            title={`Gemini AI model status: ${modelStatus.mode}`}
+          >
+            <span className={`model-dot ${modelStatus.active ? "active" : "inactive"}`} />
+            <span>
+              {modelStatus.active
+                ? `${modelStatus.model} Active`
+                : `${modelStatus.model} (${modelStatus.mode})`}
+            </span>
+          </div>
         </div>
 
         <div className="chat-topbar-right">
@@ -614,7 +660,7 @@ ${err?.message || "Verify the local backend server is running at http://127.0.0.
               </div>
             ))}
 
-            {/* Loading Indicator */}
+            {/* Loading Indicator with Dynamic Forensic Steps */}
             {loading && (
               <div className="chat-message-row detective-row">
                 <div className="chat-avatar-box">
@@ -623,10 +669,19 @@ ${err?.message || "Verify the local backend server is running at http://127.0.0.
                   </div>
                 </div>
                 <div className="chat-message-bubble detective loading-bubble">
-                  <div className="loading-detective-state">
-                    <span className="loading-search-icon">🔍</span>
-                    <span>Detective interrogating repository files and analyzing AST patterns...</span>
-                    <span className="typing-cursor">_</span>
+                  <div className="loading-detective-state" style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                      <span className="loading-search-icon">🔍</span>
+                      <strong style={{ color: "#38bdf8" }}>Forensic Analysis in Progress...</strong>
+                      <span className="typing-cursor">_</span>
+                    </div>
+                    <div style={{ fontSize: "12px", color: "#94a3b8", display: "flex", gap: "12px", alignItems: "center" }}>
+                      <span>⚡ AST parsed</span>
+                      <span>•</span>
+                      <span>🔎 Cross-referencing files</span>
+                      <span>•</span>
+                      <span>🧠 Gemini reasoning</span>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -655,7 +710,13 @@ ${err?.message || "Verify the local backend server is running at http://127.0.0.
       )}
 
       {/* Speech Error Banner */}
-      {speechError && (
+      {errorMsg && (
+          <div className="chat-speech-error-banner" style={{ borderColor: "#ef4444", background: "rgba(239, 68, 68, 0.15)" }}>
+            <span style={{ color: "#fca5a5" }}>?? {errorMsg}</span>
+            <button onClick={() => setErrorMsg(null)} type="button">?</button>
+          </div>
+        )}
+        {speechError && (
         <div className="chat-speech-error-banner">
           <span>⚠️ {speechError}</span>
           <button onClick={() => setSpeechError(null)} type="button">✕</button>

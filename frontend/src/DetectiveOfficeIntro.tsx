@@ -1,6 +1,7 @@
 import { useEffect, useState, useRef, useCallback, useMemo } from "react"
 import { Icon, Button, Logo } from "./App"
 import { fetchRepoBriefing, type RepoBriefingData } from "./repoService"
+import { PixelDetectiveSprite } from "./PixelDetectiveSprite"
 
 interface DetectiveOfficeIntroProps {
   owner: string
@@ -23,7 +24,7 @@ function DetectiveDialoguePortrait() {
   return (
     <div className="ref-portrait-frame">
       <img
-        src="/images/detective-portrait.png"
+        src="/images/detective_avatar_final.png"
         alt="Detective portrait"
         className="ref-portrait-img"
       />
@@ -40,10 +41,10 @@ function DetectiveDialoguePortrait() {
 function DetectiveCharacter() {
   return (
     <div
-      className="scene-detective-character detective-is-idle"
+      className="scene-detective-character"
       aria-label="Pixel art detective character"
     >
-      <div className="detective-sprite-frame" />
+      <PixelDetectiveSprite className="office-intro-sprite" />
       {/* Magnifying glass sparkle glint */}
       <div className="detective-lens-sparkle" aria-hidden="true">
         <span className="sparkle-star sparkle-star-1" />
@@ -718,9 +719,9 @@ export function DetectiveOfficeIntro({
             className="reference-scene-viewport"
             aria-label="Retro pixel art detective office scene matching reference artwork"
           >
-            {/* 1. New Main Background: Rainy Neon Detective Office.png */}
+            {/* 1. Main Background: Authentic rainy neon detective office workspace */}
             <img
-              src="/images/Rainy Neon Detective Office.png"
+              src="/images/rainy_neon_detective_workspace.png"
               alt="Retro pixel-art detective office"
               className="reference-scene-bg-img"
             />

@@ -4,13 +4,13 @@ import pytest
 
 
 def test_gemma_service_mock_mode() -> None:
-    """Test that GemmaService operates in mock mode by default."""
+    """Test that GemmaService operates in mock mode when no credentials are provided."""
     from app.services.gemma_service import GemmaService
     
-    # Create a GemmaService instance
-    gemma_service = GemmaService()
+    # Create a GemmaService instance explicitly with no key
+    gemma_service = GemmaService(api_key="", api_base="")
     
-    # Should be in mock mode by default (no API key/base provided)
+    # Should be in mock mode when no API key is set
     assert gemma_service.mode == "mock"
     assert gemma_service.mock_mode == True
     assert gemma_service.api_key == ""
@@ -37,20 +37,20 @@ def test_gemma_service_explicit_live_mode_without_credentials() -> None:
     gemma_service = GemmaService(mock_mode=False)
     
     # The service will be in live mode because we explicitly set mock_mode=False
-    # But it will fail when trying to use credentials (which are empty)
     assert gemma_service.mode == "live"
     assert gemma_service.mock_mode == False
 
 
 def test_gemma_service_headers_with_token() -> None:
-    """Test that GemmaService includes Authorization header when token is provided."""
+    """Test that GemmaService configures live mode and credentials properly."""
     from app.services.gemma_service import GemmaService
     
-    gemma_service = GemmaService(api_key="test_key", api_base="https://test.example.com")
+    gemma_service = GemmaService(api_key="test_key", api_base="https://test.example.com", mock_mode=False)
     
     assert gemma_service.api_key == "test_key"
     assert gemma_service.api_base == "https://test.example.com"
-    assert gemma_service.mock_mode == True
+    assert gemma_service.mock_mode == False
+    assert gemma_service.mode == "live"
 
 
 def test_gemma_service_timeout() -> None:

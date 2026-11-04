@@ -1,12 +1,14 @@
 import { useState, useEffect, useRef } from "react"
 import {
   fetchSarvamStatus,
+  fetchSarvamSessionUrl,
   sendSarvamVoiceQuery,
   synthesizeSarvamSpeech,
   type SarvamStatus,
   type RepoBriefingData,
   type TreeEntry,
 } from "./repoService"
+import { BrowserAudioInterface } from "sarvam-conv-ai-sdk/browser"
 
 interface SarvamVoiceAgentProps {
   currentRepo: string
@@ -37,6 +39,9 @@ export function SarvamVoiceAgent({
   const [sarvamStatus, setSarvamStatus] = useState<"idle" | "listening" | "processing" | "speaking">("idle")
   const [agentConfig, setAgentConfig] = useState<SarvamStatus | null>(null)
   const [textQueryInput, setTextQueryInput] = useState<string>("")
+  const [liveSessionActive, setLiveSessionActive] = useState<boolean>(false)
+  const [connectionState, setConnectionState] = useState<"unconfigured" | "ready" | "connecting" | "connected" | "failed">("ready")
+  const [errorMessage, setErrorMessage] = useState<string | null>(null)
   
   // Transcripts history
   const [transcripts, setTranscripts] = useState<VoiceTranscriptItem[]>([
@@ -51,6 +56,8 @@ export function SarvamVoiceAgent({
   const recognitionRef = useRef<any>(null)
   const transcriptEndRef = useRef<HTMLDivElement>(null)
   const currentAudioRef = useRef<HTMLAudioElement | null>(null)
+  const activeWsRef = useRef<WebSocket | null>(null)
+  const audioInterfaceRef = useRef<BrowserAudioInterface | null>(null)
 
   // Fetch Sarvam Agent configuration status from backend on mount
   useEffect(() => {
@@ -59,20 +66,38 @@ export function SarvamVoiceAgent({
       const status = await fetchSarvamStatus()
       if (isMounted) {
         setAgentConfig(status)
+        if (!status.has_api_key) {
+          setConnectionState("unconfigured")
+        } else {
+          setConnectionState("ready")
+        }
       }
     }
     loadStatus()
     return () => {
       isMounted = false
+      if (audioInterfaceRef.current) {
+        audioInterfaceRef.current.stop().catch(() => {})
+        audioInterfaceRef.current = null
+      }
+      if (activeWsRef.current) {
+        try {
+          if (activeWsRef.current.readyState === WebSocket.OPEN) {
+            activeWsRef.current.close()
+          }
+        } catch {}
+        activeWsRef.current = null
+      }
     }
   }, [])
+
 
   // Scroll to bottom of transcripts
   useEffect(() => {
     transcriptEndRef.current?.scrollIntoView({ behavior: "smooth" })
   }, [transcripts, interimText])
 
-  // Initialize SpeechRecognition
+  // Initialize SpeechRecognition as complementary speech transcription
   useEffect(() => {
     const SpeechRecognition =
       (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
@@ -114,15 +139,19 @@ export function SarvamVoiceAgent({
       recognition.onerror = (event: any) => {
         if (event.error !== "no-speech") {
           console.warn("Speech recognition notice:", event.error)
-          setIsListening(false)
-          setSarvamStatus("idle")
+          if (!activeWsRef.current) {
+            setIsListening(false)
+            setSarvamStatus("idle")
+          }
         }
       }
 
       recognition.onend = () => {
-        setIsListening(false)
-        if (sarvamStatus === "listening") {
-          setSarvamStatus("idle")
+        if (!liveSessionActive) {
+          setIsListening(false)
+          if (sarvamStatus === "listening") {
+            setSarvamStatus("idle")
+          }
         }
       }
 
@@ -134,32 +163,240 @@ export function SarvamVoiceAgent({
         recognitionRef.current?.stop()
       } catch {}
       stopSpeaking()
+      stopLiveSession()
     }
   }, [selectedLanguage, currentRepo])
 
-  // Toggle voice recognition
-  const toggleListening = () => {
-    if (!recognitionRef.current) {
-      alert("Speech recognition is not supported in this browser. Please use Chrome, Edge, or Safari.")
-      return
+  // Helper to cleanly terminate the live Sarvam Indus Voice AI session
+  const stopLiveSession = async () => {
+    if (audioInterfaceRef.current) {
+      try {
+        await audioInterfaceRef.current.stop()
+      } catch {}
+      audioInterfaceRef.current = null
     }
 
-    if (isListening) {
+    if (activeWsRef.current) {
       try {
-        recognitionRef.current.stop()
+        if (activeWsRef.current.readyState === WebSocket.OPEN) {
+          const endMsg = {
+            type: "client.action.interaction_end",
+            origin: "client",
+            timestamp: Date.now() / 1000,
+          }
+          activeWsRef.current.send(JSON.stringify(endMsg))
+          activeWsRef.current.close()
+        }
       } catch {}
+      activeWsRef.current = null
+    }
+    setLiveSessionActive(false)
+  }
+
+  // Toggle voice recognition & Sarvam Voice AI Agent connection
+  const toggleListening = async () => {
+    if (isListening || liveSessionActive) {
+      // User tapped mic to stop session
+      try {
+        recognitionRef.current?.stop()
+      } catch {}
+      await stopLiveSession()
+      stopSpeaking()
       setIsListening(false)
       setSarvamStatus("idle")
+      setConnectionState(agentConfig?.has_api_key ? "ready" : "unconfigured")
     } else {
       try {
         stopSpeaking()
-        recognitionRef.current.lang = selectedLanguage
-        recognitionRef.current.start()
+
+        // 1. If backend has Sarvam credentials, initiate real Sarvam Voice session
+        if (agentConfig?.has_api_key) {
+          setConnectionState("connecting")
+          setSarvamStatus("processing")
+
+          const sessionData = await fetchSarvamSessionUrl({
+            user_identifier: "detective-user",
+            user_identifier_type: "custom",
+            interaction_type: "call",
+          })
+
+          if (sessionData?.url) {
+            try {
+              // Construct full WebSocket URL as expected by Sarvam Indus
+              const sep = sessionData.url.includes("?") ? "&" : "?"
+              const wsUrl = `${sessionData.url}${sep}user_identifier=detective-user&user_identifier_type=custom&input_sample_rate=16000&output_sample_rate=16000&interaction_type=call`
+
+              const ws = new WebSocket(wsUrl)
+              activeWsRef.current = ws
+
+              // Instantiate Sarvam BrowserAudioInterface for live microphone input & streaming output
+              const audioInterface = new BrowserAudioInterface(16000)
+              audioInterfaceRef.current = audioInterface
+
+              ws.onopen = async () => {
+                setLiveSessionActive(true)
+                setConnectionState("connected")
+                setIsListening(true)
+                setSarvamStatus("listening")
+
+                // Send interaction_start message according to Sarvam Voice AI protocol
+                const startMsg = {
+                  type: "client.action.interaction_start",
+                  origin: "client",
+                  timestamp: Date.now() / 1000,
+                  user_identifier: "detective-user",
+                  user_identifier_type: "custom",
+                  org_id: agentConfig.org_id,
+                  workspace_id: agentConfig.workspace_id,
+                  app_id: agentConfig.app_id || "Conversatio-6103dad4-f01f",
+                  input_sample_rate: 16000,
+                  output_sample_rate: 16000,
+                  agent_variables: {
+                    repository: currentRepo,
+                    description: repoData?.description || "",
+                    language: repoData?.primaryLanguage || "",
+                  },
+                }
+                ws.send(JSON.stringify(startMsg))
+
+                // Start microphone capture via BrowserAudioInterface and stream raw PCM audio to Sarvam agent
+                try {
+                  await audioInterface.start(async (audioData) => {
+                    if (ws.readyState === WebSocket.OPEN) {
+                      // Convert Uint8Array to base64
+                      let binary = ""
+                      const bytes = audioData
+                      const len = bytes.byteLength
+                      for (let i = 0; i < len; i++) {
+                        binary += String.fromCharCode(bytes[i])
+                      }
+                      const b64 = btoa(binary)
+                      const audioMsg = {
+                        type: "client.media.audio_chunk",
+                        origin: "client",
+                        timestamp: Date.now() / 1000,
+                        audio_base64: b64,
+                        format: "linear16",
+                        sample_rate: 16000,
+                      }
+                      ws.send(JSON.stringify(audioMsg))
+                    }
+                  })
+                } catch (micErr) {
+                  console.warn("BrowserAudioInterface microphone start error:", micErr)
+                }
+              }
+
+              ws.onmessage = async (event) => {
+                try {
+                  const data = JSON.parse(event.data)
+
+                  // Handle audio chunk responses directly through BrowserAudioInterface
+                  if (data?.type === "server.media.audio_chunk" && data.audio_base64) {
+                    setIsSpeaking(true)
+                    setSarvamStatus("speaking")
+                    // Convert base64 to Uint8Array for BrowserAudioInterface output
+                    const binStr = atob(data.audio_base64)
+                    const u8 = new Uint8Array(binStr.length)
+                    for (let i = 0; i < binStr.length; i++) {
+                      u8[i] = binStr.charCodeAt(i)
+                    }
+                    if (audioInterfaceRef.current) {
+                      await audioInterfaceRef.current.output(u8, 16000)
+                    }
+                  }
+
+                  // Handle transcription and text updates
+                  if (data?.type === "server.transcription" && data.content) {
+                    const isBot = data.role === "agent" || data.role === "bot"
+                    setTranscripts((prev) => [
+                      ...prev,
+                      {
+                        id: "sarvam-live-" + Date.now() + Math.random().toString(36).substring(2, 6),
+                        speaker: isBot ? "sarvam" : "investigator",
+                        text: data.content,
+                        timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+                      },
+                    ])
+                    if (isBot) {
+                      setIsSpeaking(true)
+                      setSarvamStatus("speaking")
+                    }
+                  } else if (data?.type === "server.text" || (data?.text && !data.audio_base64)) {
+                    const txt = data.text || data.payload?.text
+                    if (txt) {
+                      setTranscripts((prev) => [
+                        ...prev,
+                        {
+                          id: "sarvam-live-text-" + Date.now(),
+                          speaker: "sarvam",
+                          text: txt,
+                          timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+                        },
+                      ])
+                    }
+                  }
+
+                  // Handle user interrupt or utterance completion
+                  if (data?.type === "server.event.user_interrupt") {
+                    audioInterfaceRef.current?.interrupt()
+                    setIsSpeaking(false)
+                    setSarvamStatus("listening")
+                  } else if (data?.status === "completed") {
+                    setIsSpeaking(false)
+                    setSarvamStatus("listening")
+                  } else if (data?.type === "server.action.interaction_end") {
+                    await stopLiveSession()
+                    setIsListening(false)
+                    setSarvamStatus("idle")
+                  }
+                } catch (e) {
+                  console.warn("Sarvam WS message processing:", e)
+                }
+              }
+
+              ws.onclose = () => {
+                setLiveSessionActive(false)
+                setConnectionState("ready")
+                activeWsRef.current = null
+                if (audioInterfaceRef.current) {
+                  audioInterfaceRef.current.stop().catch(() => {})
+                  audioInterfaceRef.current = null
+                }
+                setIsListening(false)
+                setSarvamStatus("idle")
+              }
+
+              ws.onerror = (err) => {
+                console.warn("Sarvam Live Voice AI notice:", err)
+                setLiveSessionActive(false)
+                setConnectionState("ready")
+              }
+            } catch (err) {
+              console.warn("Could not establish Sarvam live voice connection:", err)
+              setConnectionState("ready")
+            }
+          }
+        }
+
+        // 2. Also start speech recognition if available for local transcription UI
+        if (recognitionRef.current) {
+          try {
+            recognitionRef.current.lang = selectedLanguage
+            recognitionRef.current.start()
+          } catch {}
+        }
+        setIsListening(true)
+        setSarvamStatus("listening")
       } catch (err: any) {
-        console.error("Failed to start speech recognition:", err)
+        console.error("Failed to start voice interrogation:", err)
+        setConnectionState("failed")
+        setIsListening(false)
+        setSarvamStatus("idle")
       }
     }
   }
+
 
   // Handle incoming user spoken text and query the backend Sarvam Voice Agent
   const handleUserUtterance = async (spokenQuery: string) => {
@@ -177,7 +414,7 @@ export function SarvamVoiceAgent({
     try {
       const repoContext = {
         repository: currentRepo,
-        language: repoData?.language,
+        language: repoData?.primaryLanguage,
         description: repoData?.description,
         fileCount: treeEntries.length,
         primaryFiles: treeEntries.slice(0, 8).map((f) => f.path),
@@ -307,6 +544,30 @@ export function SarvamVoiceAgent({
     }
   }
 
+  // Handle Starting Over Speech and Conversation
+  const handleStartOver = () => {
+    stopSpeaking()
+    if (isListening && recognitionRef.current) {
+      try {
+        recognitionRef.current.stop()
+      } catch {}
+    }
+    stopLiveSession().catch(() => {})
+    setIsListening(false)
+    setInterimText("")
+    setLiveSessionActive(false)
+    setSarvamStatus("idle")
+    setTextQueryInput("")
+    setTranscripts([
+      {
+        id: "init-" + Date.now(),
+        speaker: "sarvam",
+        text: `Sarvam Voice AI Agent online for repository "${currentRepo}". Tap the microphone to speak your question or instruction.`,
+        timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+      },
+    ])
+  }
+
   // Handle replaying audio for a message
   const handleReplayMessage = async (item: VoiceTranscriptItem) => {
     if (item.audioBase64) {
@@ -377,14 +638,52 @@ export function SarvamVoiceAgent({
             </select>
           </div>
 
+          <button
+            className="sarvam-start-over-btn"
+            onClick={handleStartOver}
+            type="button"
+            title="Start Over Speech & Reset Transcripts"
+          >
+            🔄 Start Over
+          </button>
+
           <div className="sarvam-engine-status">
             <span className="sarvam-engine-label">Engine:</span>
-            <span className="sarvam-engine-badge" title={agentConfig?.has_api_key ? "Live Sarvam Agent Proxy Connected" : "Local Proxy Mode"}>
-              {agentConfig?.has_api_key ? "Sarvam Indus Connected" : "Sarvam Audio Core"}
+            <span
+              className={`sarvam-engine-badge ${connectionState === "connected" ? "connected-pulse" : ""}`}
+              title={
+                connectionState === "connected"
+                  ? "Live Sarvam Indus WebSocket Stream Active"
+                  : connectionState === "connecting"
+                  ? "Connecting to Sarvam Indus Session..."
+                  : connectionState === "ready"
+                  ? "Sarvam Indus Configured & Ready"
+                  : connectionState === "unconfigured"
+                  ? "Sarvam API Key Unconfigured in backend/.env"
+                  : "Sarvam Voice Connection Error"
+              }
+            >
+              {connectionState === "connected"
+                ? "🟢 Sarvam Indus Live"
+                : connectionState === "connecting"
+                ? "🟡 Connecting..."
+                : connectionState === "ready"
+                ? "Sarvam Indus Connected"
+                : connectionState === "unconfigured"
+                ? "Sarvam Unconfigured"
+                : "🔴 Connection Failed"}
             </span>
           </div>
         </div>
       </header>
+
+      {/* Audio Permission / Connection Error Banner */}
+      {errorMessage && (
+        <div className="chat-speech-error-banner" style={{ margin: "0 24px 16px 24px", borderColor: "#ef4444", background: "rgba(239, 68, 68, 0.15)" }}>
+          <span style={{ color: "#fca5a5" }}>?? {errorMessage}</span>
+          <button onClick={() => setErrorMessage(null)} type="button">?</button>
+        </div>
+      )}
 
       {/* Main Voice Interactive Arena */}
       <div className="sarvam-voice-stage">

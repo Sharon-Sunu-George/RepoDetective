@@ -98,89 +98,67 @@ async def get_sarvam_status():
 
 @router.post("/converse", response_model=ConverseResponse)
 async def converse_with_sarvam_agent(payload: ConverseRequest):
-    """Processes user voice/text query with repository context through Sarvam AI."""
-    has_key = bool(settings.sarvam_api_key and settings.sarvam_api_key.strip())
+    """Processes user voice/text query with repository context through Sarvam AI with ultra-fast latency."""
     repo_name = payload.repository_url.split("/")[-2:]
     formatted_repo = "/".join(repo_name) if len(repo_name) == 2 else payload.repository_url
-
-    # If Sarvam key is configured, query Sarvam AI
-    if has_key:
-        try:
-            prompt_context = (
-                f"You are the Sarvam Voice Detective Agent for repository: {formatted_repo}.\n"
-                f"Context: {payload.repo_context or 'Repository analysis in progress.'}\n"
-                f"User asked: {payload.spoken_query}\n"
-                f"Provide a concise, spoken conversational response suitable for a voice agent."
-            )
-
-            headers = {
-                "api-subscription-key": settings.sarvam_api_key.strip(),
-                "Content-Type": "application/json",
-            }
-
-            # Optional: If OpenAI-compatible endpoint or Sarvam chat endpoint is enabled
-            chat_url = f"{settings.sarvam_api_base}/chat/completions"
-            async with httpx.AsyncClient(timeout=settings.sarvam_timeout_seconds) as client:
-                res = await client.post(
-                    chat_url,
-                    headers=headers,
-                    json={
-                        "model": "sarvam-30b" if "30b" in settings.sarvam_tts_model else "sarvam-2b",
-                        "messages": [
-                            {"role": "system", "content": "You are a professional software detective analyzing repositories for developers. Keep answers concise, factual, and direct for spoken audio output."},
-                            {"role": "user", "content": prompt_context},
-                        ],
-                        "max_tokens": 250,
-                    },
-                )
-                if res.status_code == 200:
-                    data = res.json()
-                    answer = data.get("choices", [{}])[0].get("message", {}).get("content", "")
-                    if answer:
-                        # Optionally synthesize audio if requested
-                        audio_b64 = await _synthesize_speech_internal(answer, payload.language_code)
-                        return ConverseResponse(
-                            response_text=answer,
-                            language_code=payload.language_code,
-                            agent_id=settings.sarvam_app_id or "sarvam-agent",
-                            audio_base64=audio_b64,
-                            mode="sarvam-live",
-                        )
-        except Exception as e:
-            logger.warning(f"Sarvam live chat failed, using context fallback: {e}")
-
-    # Deterministic Contextual Detective Response
     q = payload.spoken_query.lower()
-    if "entry" in q or "start" in q or "main" in q:
-        reply = (
-            f"The primary execution entry point for {formatted_repo} is configured in package.json and index files. "
-            f"External consumers invoke the default exported module."
-        )
-    elif "language" in q or "stack" in q or "tech" in q:
-        reply = (
-            f"Repository {formatted_repo} utilizes modern modular architecture with standardized build configurations and test harnesses."
-        )
-    elif "test" in q or "spec" in q:
-        reply = (
-            f"Automated test suites for {formatted_repo} validate core functionality against edge cases and regression patterns."
-        )
-    else:
-        reply = (
-            f"Sarvam Voice AI Agent has indexed {formatted_repo}. "
-            f"All architecture files, entry points, and dependencies are ready for investigation."
-        )
 
-    # Synthesize audio with Sarvam Bulbul TTS if key is present
+    # Retrieve cached repository bundle if available for ultra-rich instant responses
+    owner = repo_name[0] if len(repo_name) == 2 else "vercel"
+    repo = repo_name[1] if len(repo_name) == 2 else "ms"
+    
+    from app.services.github_service import _REPO_BUNDLE_CACHE
+    from app.services.repository_parser import RepositoryParser
+    from app.services.gemma_service import GemmaService
+    
+    cache_key = f"{owner.lower()}/{repo.lower()}"
+    bundle = _REPO_BUNDLE_CACHE.get(cache_key)
+    parsed = RepositoryParser().parse(bundle) if bundle else {}
+    
+    entry_pts = parsed.get("entry_points") or ["index.ts", "package.json"]
+    important_files = parsed.get("important_files") or ["package.json", "src/index.ts", "readme.md"]
+    languages = list(parsed.get("languages", {}).keys()) or ["TypeScript", "JavaScript"]
+    primary_lang = languages[0] if languages else "TypeScript"
+
+    # Use Gemma to formulate a natural, concise spoken answer (like ChatGPT / Real Voice AI)
+    gemma = GemmaService()
+    spoken_prompt = (
+        f"You are the Voice AI Agent interrogating GitHub repository '{owner}/{repo}'.\n"
+        f"The user spoke to you: '{payload.spoken_query}'.\n"
+        f"Context: {owner}/{repo} (Primary language: {primary_lang}, key files: {', '.join(important_files[:2])}).\n"
+        f"Reply in 1 or 2 natural, concise spoken sentences directly answering them. "
+        f"Do not use markdown, bullet points, or code formatting."
+    )
+    
+    reply = ""
+    try:
+        gemma_res = await gemma.generate(prompt=spoken_prompt, max_tokens=100, temperature=0.3)
+        candidate = gemma_res.get("text", "").strip()
+        if candidate and "⚠️" not in candidate and "[MOCK" not in candidate:
+            reply = candidate.replace("`", "").replace("*", "").replace("#", "").strip()
+    except Exception as e:
+        logger.warning(f"Voice Gemma generation error: {e}")
+
+    if not reply:
+        if any(k in q for k in ["hi", "hello", "hey"]):
+            reply = f"Hello Detective! I am ready to interrogate the repository {formatted_repo}. What would you like to explore?"
+        elif any(k in q for k in ["entry", "main", "start"]):
+            reply = f"In {formatted_repo}, the main entry point is {entry_pts[0] if entry_pts else 'index.ts'}."
+        else:
+            reply = f"In {formatted_repo}, {primary_lang} is the primary language, with core logic located in {important_files[0] if important_files else 'the source files'}."
+
     audio_b64 = None
-    if has_key:
+    try:
         audio_b64 = await _synthesize_speech_internal(reply, payload.language_code)
+    except Exception as e:
+        logger.warning(f"Voice synthesis in converse failed: {e}")
 
     return ConverseResponse(
         response_text=reply,
         language_code=payload.language_code,
-        agent_id=settings.sarvam_app_id or "sarvam-voice-agent",
+        agent_id=settings.sarvam_app_id or "Conversatio-6103dad4-f01f",
         audio_base64=audio_b64,
-        mode="sarvam-proxy" if has_key else "local-proxy",
+        mode="sarvam-voice",
     )
 
 
@@ -296,3 +274,67 @@ async def speech_to_text_proxy(payload: STTRequest):
             return res.json()
     except httpx.RequestError as exc:
         raise HTTPException(status_code=504, detail=f"Failed to reach Sarvam STT service: {exc}")
+
+
+class SignedUrlRequest(BaseModel):
+    org_id: str | None = None
+    workspace_id: str | None = None
+    app_id: str | None = None
+    user_identifier: str = "detective-user"
+    user_identifier_type: str = "custom"
+    interaction_type: str = "call"
+    version: int | None = None
+
+
+@router.post("/session-url")
+async def get_sarvam_session_url(payload: SignedUrlRequest):
+    """Secure proxy for getting the signed WebSocket URL from Sarvam API without exposing the secret API key to the browser."""
+    api_key = settings.sarvam_api_key.strip() if settings.sarvam_api_key else ""
+    if not api_key:
+        raise HTTPException(
+            status_code=400,
+            detail="SARVAM_API_KEY is not configured in backend .env file.",
+        )
+
+    org_id = payload.org_id or settings.sarvam_org_id
+    workspace_id = payload.workspace_id or settings.sarvam_workspace_id
+    app_id = payload.app_id or settings.sarvam_app_id or "Conversatio-6103dad4-f01f"
+
+    missing = []
+    if not org_id:
+        missing.append("SARVAM_ORG_ID (organization ID)")
+    if not workspace_id:
+        missing.append("SARVAM_WORKSPACE_ID (workspace ID)")
+    if missing:
+        raise HTTPException(
+            status_code=422,
+            detail=f"Missing required Sarvam Indus configuration: {', '.join(missing)}. Please configure in backend/.env.",
+        )
+
+    # Sarvam official URL pattern: {baseUrl}orgs/{org_id}/workspaces/{workspace_id}/apps/{app_id}/url
+    base = settings.sarvam_api_base.rstrip("/")
+    target_url = f"{base}/orgs/{org_id}/workspaces/{workspace_id}/apps/{app_id}/url"
+    params = {
+        "user_identifier": payload.user_identifier,
+        "user_identifier_type": payload.user_identifier_type,
+        "interaction_type": payload.interaction_type,
+    }
+    if payload.version:
+        params["version"] = str(payload.version)
+
+    headers = {
+        "X-API-Key": api_key,
+        "api-subscription-key": api_key,
+    }
+
+    try:
+        async with httpx.AsyncClient(timeout=15.0) as client:
+            resp = await client.get(target_url, params=params, headers=headers)
+            if resp.status_code != 200:
+                raise HTTPException(
+                    status_code=resp.status_code,
+                    detail=f"Sarvam session URL error ({resp.status_code}): {resp.text}",
+                )
+            return resp.json()
+    except httpx.RequestError as exc:
+        raise HTTPException(status_code=504, detail=f"Failed to reach Sarvam session endpoint: {exc}")

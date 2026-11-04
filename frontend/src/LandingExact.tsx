@@ -147,7 +147,7 @@ export function LandingExact({ onStart }: LandingExactProps) {
 
             {/* Supporting Copy */}
             <p className="hero-supporting-copy">
-              Enter a GitHub repository, let Gemma analyze it, and turn complex code
+              Enter a GitHub repository, let Gemini analyze it, and turn complex code
               into interactive challenges. Explore, learn, and make your first contribution
               with RepoDetective.
             </p>

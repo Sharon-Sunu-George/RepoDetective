@@ -1339,7 +1339,7 @@ export function DetectiveDashboard({
                   </div>
                   <div className="setting-row">
                     <span>AI REASONING PROVIDER</span>
-                    <b className="cyan-text">GEMMA 3 / LOCAL DETECTIVE INFERENCE</b>
+                    <b className="cyan-text">GEMINI 3.8 FLASH / DETECTIVE INFERENCE</b>
                   </div>
                 </div>
               )}

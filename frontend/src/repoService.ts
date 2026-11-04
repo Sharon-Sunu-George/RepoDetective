@@ -126,6 +126,7 @@ export interface FullAnalysisData {
     }
     final_verified?: boolean
     gemma_mode?: string
+    gemini_mode?: string
   }
 }
 
@@ -138,7 +139,11 @@ export interface Note {
   updated_at: string
 }
 
-const BACKEND_BASE = "http://127.0.0.1:8000"
+export const BACKEND_BASE =
+  typeof window !== "undefined" && window.location.port === "8000"
+    ? ""
+    : "http://127.0.0.1:8000"
+
 
 export function parseGitHubUrl(input: string): { owner: string; repo: string; fullUrl: string } | null {
   const trimmed = input.trim()
@@ -962,4 +967,24 @@ export async function synthesizeSarvamSpeech(
   }
   return null
 }
+
+/**
+ * Fetches signed WebSocket session URL from backend proxy for live Sarvam Indus Voice AI
+ */
+export async function fetchSarvamSessionUrl(params: Record<string, any> = {}): Promise<{ url: string; reference_id?: string; expires_at?: number } | null> {
+  try {
+    const res = await fetch(`${BACKEND_BASE}/api/sarvam/session-url`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(params),
+    })
+    if (res.ok) {
+      return await res.json()
+    }
+  } catch (err) {
+    console.warn("Failed to get Sarvam session URL:", err)
+  }
+  return null
+}
+
 

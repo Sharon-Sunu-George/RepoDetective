@@ -99,23 +99,83 @@ async def ask_question(body: AskQuestionRequest) -> dict:
     parsed = parser.parse(bundle)
 
     gemma = GemmaService()
-    prompt = (
-        f"You are RepoDetective AI assistant answering a user's question about the repository {owner}/{repo}.\n"
-        f"Primary language: {next(iter(parsed.get('languages', {})), 'Unknown')}\n"
-        f"Important files: {', '.join(parsed.get('important_files', [])[:10])}\n"
-        f"Entry points: {', '.join(parsed.get('entry_points', []))}\n"
-        f"Question: {body.question}\n\n"
-        f"Answer clearly and factually. Reference specific files if relevant."
-    )
-    res = await gemma.generate(prompt=prompt, system="You are an expert software developer and repository detective.")
+
+    # Grounding context: Extract real README, file structure, and package manifest (optimized for fast prompt ingestion)
+    readme_snippet = (bundle.get("readme") or "")[:1000]
+
+    # Build context from actual parsed files (concise snippets for rapid inference)
+    key_files_snippets = []
+    file_contents_map = bundle.get("file_contents", {})
+    for path, content in list(file_contents_map.items())[:3]:
+        if not ("lock" in path.lower() or path.lower().endswith(".map")):
+            clean_content = content[:450].strip()
+            if clean_content:
+                key_files_snippets.append(f"--- File: {path} ---\n{clean_content}")
+    files_context = "\n\n".join(key_files_snippets)
+
+
+    # Format previous conversation history if provided
+    history_lines = []
+    if body.chat_history:
+        for turn in body.chat_history[-4:]:  # last 4 turns
+            role = "User" if turn.get("role") == "user" else "Detective"
+            text = turn.get("text") or turn.get("content") or ""
+            if text:
+                history_lines.append(f"{role}: {text}")
+    history_context = "\n".join(history_lines)
+
+    is_greeting = body.question.strip().lower() in ["hi", "hello", "hey", "hola", "sup", "what's up", "good morning", "good evening", "how are you"]
+    
+    if is_greeting:
+        prompt = (
+            f"You are the RepoDetective AI Teaching Agent assisting a developer investigating the GitHub repository '{owner}/{repo}'.\n"
+            f"The user just greeted you with: '{body.question}'.\n"
+            f"Reply naturally, concisely, and warmly like a friendly AI assistant (like ChatGPT/Detective). "
+            f"Welcome them to the case on '{owner}/{repo}', briefly let them know what this repository is about in 1-2 friendly sentences, and ask what they would like to investigate or understand first."
+        )
+    else:
+        prompt = (
+            f"You are the RepoDetective AI Teaching Agent, an expert conversational coding assistant (like ChatGPT) specializing in repository forensics.\n\n"
+            f"Repository: {owner}/{repo}\n"
+            f"Primary Language: {next(iter(parsed.get('languages', {})), 'Unknown')}\n"
+            f"Entry Points: {', '.join(parsed.get('entry_points', []))}\n"
+            f"Important Files: {', '.join(parsed.get('important_files', [])[:5])}\n"
+            f"README Motive: {(readme_snippet or 'N/A')[:400]}\n\n"
+            f"Key File Evidence:\n{files_context or 'N/A'}\n\n"
+        )
+        if history_context:
+            prompt += f"Recent Chat History:\n{history_context}\n\n"
+
+        prompt += (
+            f"User Question: {body.question}\n\n"
+            f"Respond directly and conversationally to the user's question, explaining concepts clearly with natural phrasing (like ChatGPT). "
+            f"Ground your answer in the repository evidence above and mention the relevant filenames where helpful. "
+            f"Do not output internal scratchpads, meta-prompts, or drafting thoughts."
+        )
+
+    res = await gemma.generate(prompt=prompt, max_tokens=600, temperature=0.3)
 
     # Match evidence files
     matched_files = [f for f in parsed.get("important_files", []) if any(part in f.lower() for part in body.question.lower().split())]
 
+    # Clean any internal scratchpad if model output leaked any thinking
+    raw_answer = res.get("text") or "No answer could be generated."
+    clean_answer = raw_answer
+    
+    # Strip thinking markers if present
+    if "</think>" in raw_answer:
+        clean_answer = raw_answer.split("</think>")[-1].strip()
+    elif "\n\n" in raw_answer and any(marker in raw_answer for marker in ["*   Draft", "*   Constraint:", "*   User Question:", "*   Role:"]):
+        paragraphs = raw_answer.split("\n\n")
+        # Keep non-scratchpad paragraphs
+        non_scratchpad = [p for p in paragraphs if not (p.strip().startswith("*   ") and any(k in p for k in ["User Question:", "Role:", "Repository:", "Evidence", "Draft", "Constraint:", "Technical Implementation:", "Explain clearly?"]))]
+        clean_answer = "\n\n".join(non_scratchpad).strip() or raw_answer
+
+
     return {
         "repository": f"{owner}/{repo}",
         "question": body.question,
-        "answer": res.get("text") or "No answer could be generated.",
+        "answer": clean_answer,
         "mode": res.get("mode", "mock"),
         "model": res.get("model", "gemma"),
         "references": matched_files or parsed.get("important_files", [])[:3],

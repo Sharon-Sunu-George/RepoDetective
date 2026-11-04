@@ -18,6 +18,9 @@ class GitHubError(Exception):
         self.status_code = status_code
 
 
+_REPO_BUNDLE_CACHE: dict[str, dict[str, Any]] = {}
+
+
 class GitHubService:
     """Interacts with the GitHub REST API with timeouts and rate-limit handling."""
 
@@ -64,6 +67,12 @@ class GitHubService:
             if resp.status_code == 404:
                 raise GitHubError("Repository not found or is private.", status_code=404)
             if resp.status_code == 401:
+                # If configured token is invalid or expired, retry without authorization for public repositories
+                if self.token:
+                    async with httpx.AsyncClient(timeout=self.timeout, headers={"Accept": "application/vnd.github.v3+json"}, follow_redirects=True) as fallback_client:
+                        fallback_resp = await fallback_client.get(url, params=params)
+                        if fallback_resp.status_code < 400:
+                            return fallback_resp
                 raise GitHubError("GitHub authentication failed. Check GITHUB_TOKEN.", status_code=401)
             if resp.status_code >= 400:
                 # Truncate body to avoid leaking huge payloads
@@ -78,8 +87,13 @@ class GitHubService:
         Limits enforced: max files, max file size, max total bytes.
         Treats all content as untrusted — never executed.
         """
+        cache_key = f"{owner.lower()}/{repo.lower()}"
+        if cache_key in _REPO_BUNDLE_CACHE:
+            return _REPO_BUNDLE_CACHE[cache_key]
+
         # 1. Metadata
         meta_resp = await self._get(f"/repos/{owner}/{repo}")
+
         metadata = meta_resp.json()
         default_branch = metadata.get("default_branch") or "main"
 
@@ -135,65 +149,43 @@ class GitHubService:
             else:
                 raise
 
-        # 5. Select files to fetch content for
+        # 5. Select key files to fetch content for in parallel (top 5 critical files for instant forensic analysis)
         from app.services.repository_parser import RepositoryParser
+        import asyncio
 
         parser = RepositoryParser()
-        # Use parser to rank files without needing content yet
-        provisional = parser.select_files_to_fetch(tree_entries)
+        provisional = parser.select_files_to_fetch(tree_entries)[:5]
 
         file_contents: dict[str, str] = {}
         total_bytes = 0
-        for path in provisional:
-            if len(file_contents) >= settings.max_files_to_fetch:
-                warnings.append(f"File fetch limit reached ({settings.max_files_to_fetch}).")
-                break
+
+        async def fetch_file(path: str):
             try:
                 f_resp = await self._get(f"/repos/{owner}/{repo}/contents/{path}")
                 fdata = f_resp.json()
-                # GitHub may return list for directories — skip
-                if isinstance(fdata, list):
-                    continue
-                if fdata.get("type") != "file":
-                    continue
+                if isinstance(fdata, list) or fdata.get("type") != "file":
+                    return None
                 size = fdata.get("size") or 0
                 if size > settings.max_file_size_bytes:
-                    warnings.append(f"Skipped {path}: exceeds per-file limit ({size} bytes).")
-                    continue
-                if total_bytes + size > settings.max_total_bytes:
-                    warnings.append(f"Total fetch budget exceeded; skipping remaining files from {path}.")
-                    break
+                    return None
                 content_b64 = fdata.get("content") or ""
-                encoding = fdata.get("encoding")
-                if encoding == "base64" and content_b64:
+                decoded = ""
+                if fdata.get("encoding") == "base64" and content_b64:
                     try:
                         decoded = base64.b64decode(content_b64).decode("utf-8", errors="replace")
                     except Exception:
-                        warnings.append(f"Could not decode {path}.")
-                        continue
-                else:
-                    # Fallback: try raw download_url
-                    download_url = fdata.get("download_url")
-                    if download_url:
-                        async with httpx.AsyncClient(timeout=self.timeout) as c2:
-                            r2 = await c2.get(download_url, headers=self._headers())
-                            if r2.status_code == 200:
-                                decoded = r2.text[: settings.max_file_size_bytes]
-                            else:
-                                continue
-                    else:
-                        continue
-                # Truncate to limit anyway
-                if len(decoded.encode("utf-8")) > settings.max_file_size_bytes:
-                    decoded = decoded[: settings.max_file_size_bytes]
-                    warnings.append(f"Truncated {path} to size limit.")
-                file_contents[path] = decoded
-                total_bytes += size
-            except GitHubError as exc:
-                if exc.status_code == 404:
-                    warnings.append(f"File not found when fetching {path}.")
-                    continue
-                raise
+                        return None
+                return (path, decoded, size)
+            except Exception:
+                return None
+
+        fetched_results = await asyncio.gather(*(fetch_file(p) for p in provisional), return_exceptions=True)
+        for item in fetched_results:
+            if isinstance(item, tuple) and item is not None:
+                p, dec, sz = item
+                if dec:
+                    file_contents[p] = dec[:settings.max_file_size_bytes]
+                    total_bytes += sz
 
         bundle: dict[str, Any] = {
             "metadata": metadata,
@@ -206,4 +198,6 @@ class GitHubService:
             "repo": repo,
             "default_branch": default_branch,
         }
+        _REPO_BUNDLE_CACHE[cache_key] = bundle
         return bundle
+
