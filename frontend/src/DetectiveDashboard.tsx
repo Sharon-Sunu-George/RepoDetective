@@ -14,6 +14,7 @@ import {
   type Note,
 } from "./repoService"
 import { PixelDetectiveSprite } from "./PixelDetectiveSprite"
+import { API_BASE_URL } from "./apiConfig"
 import { RepositoryGameMap } from "./RepositoryGameMap"
 import { DetectiveChatPage } from "./DetectiveChatPage"
 import { SarvamVoiceAgent } from "./SarvamVoiceAgent"
@@ -1337,7 +1338,7 @@ export function DetectiveDashboard({
                   </div>
                   <div className="setting-row">
                     <span>BACKEND API ENDPOINT</span>
-                    <code>http://localhost:8000/api/repositories</code>
+                    <code>{API_BASE_URL}/api/repositories</code>
                   </div>
                   <div className="setting-row">
                     <span>AI REASONING PROVIDER</span>
