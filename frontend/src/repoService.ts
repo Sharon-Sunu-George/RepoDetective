@@ -138,7 +138,7 @@ export interface Note {
   updated_at: string
 }
 
-const BACKEND_BASE = "http://127.0.0.1:8000"
+import { API_BASE_URL, getApiUrl } from "./apiConfig"
 
 export function parseGitHubUrl(input: string): { owner: string; repo: string; fullUrl: string } | null {
   const trimmed = input.trim()
@@ -657,7 +657,7 @@ ms(ms('10 hours'))    // "10h"
 
   // 1. Try local FastAPI backend first
   try {
-    const res = await fetch(`${BACKEND_BASE}/api/repositories/file-content`, {
+    const res = await fetch(getApiUrl("/api/repositories/file-content"), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -700,7 +700,7 @@ export async function askQuestionAboutRepo(
 ): Promise<{ answer: string; references: string[]; mode: string }> {
   // Try backend first
   try {
-    const res = await fetch(`${BACKEND_BASE}/api/repositories/ask`, {
+    const res = await fetch(getApiUrl("/api/repositories/ask"), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -758,7 +758,7 @@ export async function askQuestionAboutRepo(
  */
 export async function getSavedNotes(repository: string): Promise<Note[]> {
   try {
-    const res = await fetch(`${BACKEND_BASE}/api/repositories/notes?repository=${encodeURIComponent(repository)}`)
+    const res = await fetch(getApiUrl(`/api/repositories/notes?repository=${encodeURIComponent(repository)}`))
     if (res.ok) {
       const data = await res.json()
       if (Array.isArray(data.notes) && data.notes.length > 0) {
@@ -802,7 +802,7 @@ export async function saveNote(note: Note): Promise<void> {
 
   // Post to backend
   try {
-    await fetch(`${BACKEND_BASE}/api/repositories/notes`, {
+    await fetch(getApiUrl("/api/repositories/notes"), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(note),
@@ -824,7 +824,7 @@ export async function deleteNote(repository: string, noteId: string): Promise<vo
 
   // Remove from backend
   try {
-    await fetch(`${BACKEND_BASE}/api/repositories/notes/${noteId}?repository=${encodeURIComponent(repository)}`, {
+    await fetch(getApiUrl(`/api/repositories/notes/${noteId}?repository=${encodeURIComponent(repository)}`), {
       method: "DELETE",
     })
   } catch {

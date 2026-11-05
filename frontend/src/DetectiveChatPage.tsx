@@ -5,6 +5,7 @@ import {
   type RepoBriefingData,
   type TreeEntry,
 } from "./repoService"
+import { API_BASE_URL } from "./apiConfig"
 import { PixelDetectiveSprite } from "./PixelDetectiveSprite"
 
 interface ChatMessage {
@@ -304,7 +305,7 @@ export function DetectiveChatPage({
         id: `err-${Date.now()}`,
         role: "detective",
         text: `⚠️ **Forensic Analysis Warning**: Could not connect to the remote investigation agent.
-${err?.message || "Verify the local backend server is running at http://127.0.0.1:8000."}`,
+${err?.message || "Verify the backend server is reachable at ${API_BASE_URL}."}`,
         references: ["package.json"],
         timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
       }
