@@ -1,5 +1,5 @@
 
-"""Gemma model provider using Google's official Gen AI SDK."""
+"""Gemini/Gemma model provider using Google's official Gen AI SDK."""
 
 from __future__ import annotations
 
@@ -27,7 +27,7 @@ class GemmaService:
         timeout: float | None = None,
     ) -> None:
         self.api_key = (
-            api_key if api_key is not None else settings.gemma_api_key
+            api_key if api_key is not None else (settings.gemini_api_key or settings.gemma_api_key)
         )
         self.api_base = (api_base if api_base is not None else (settings.gemma_api_base or '')).rstrip('/')
         self.model = model or settings.gemma_model
@@ -81,46 +81,39 @@ class GemmaService:
         )
 
         try:
-            # Attempt generation with 1 immediate retry for transient 500/network glitches
+            models_to_try = [self.model]
+            for fallback in ["gemini-3.5-flash", "gemini-3.8-flash", "gemma-4-26b-a4b-it"]:
+                if fallback not in models_to_try:
+                    models_to_try.append(fallback)
+
             last_exc: Exception | None = None
-            for attempt in range(2):
-                try:
-                    response = await self.client.aio.models.generate_content(
-                        model=self.model,
-                        contents=prompt,
-                        config=config,
-                    )
+            for current_model in models_to_try:
+                for attempt in range(2):
+                    try:
+                        response = await self.client.aio.models.generate_content(
+                            model=current_model,
+                            contents=prompt,
+                            config=config,
+                        )
 
-                    generated_text = getattr(response, "text", None)
-                    if not generated_text or not generated_text.strip():
-                        raise RuntimeError("Gemma returned an empty response.")
+                        generated_text = getattr(response, "text", None)
+                        if not generated_text or not generated_text.strip():
+                            raise RuntimeError(f"{current_model} returned an empty response.")
 
-                    return {
-                        "text": generated_text,
-                        "mode": "live",
-                        "model": self.model,
-                    }
-                except Exception as exc:
-                    last_exc = exc
-                    # Retry transient network errors, timeouts, connection resets and HTTP 500/502/503/504
-                    err_str = str(exc).lower()
-                    is_transient = any(
-                        term in err_str
-                        for term in [
-                            "500", "502", "503", "504",
-                            "timeout", "timed out", "connection reset", "connection refused",
-                            "econnreset", "remote disconnected", "network"
-                        ]
-                    )
-                    # Never retry permanent authentication or validation errors
-                    is_permanent = any(
-                        term in err_str
-                        for term in ["400", "401", "403", "invalid api key", "api_key_invalid", "unauthenticated", "permission_denied"]
-                    )
-                    if attempt == 0 and is_transient and not is_permanent:
-                        await asyncio.sleep(0.5)
-                        continue
-                    break
+                        return {
+                            "text": generated_text,
+                            "mode": "live",
+                            "model": current_model,
+                        }
+                    except Exception as exc:
+                        last_exc = exc
+                        err_str = str(exc).lower()
+                        if any(t in err_str for t in ["400", "401", "403", "invalid api key", "api_key_invalid", "unauthenticated", "permission_denied"]):
+                            raise exc
+                        if attempt == 0:
+                            await asyncio.sleep(0.5)
+                            continue
+                        break
 
             if last_exc is not None:
                 raise last_exc
@@ -167,3 +160,5 @@ class GemmaService:
             f"This is a mock explanation, not a real AI response "
             f"from {self.model}."
         )
+
+

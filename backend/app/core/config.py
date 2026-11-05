@@ -33,9 +33,10 @@ class Settings(BaseSettings):
     github_timeout_seconds: float = 10.0
 
     # Gemma / generic LLM provider
+    gemini_api_key: str = ""
     gemma_api_key: str = ""
     gemma_api_base: str = ""  # e.g. https://api.example.com/v1
-    gemma_model: str = "gemma-3-4b-it"
+    gemma_model: str = "gemini-3.5-flash"
     gemma_timeout_seconds: float = 30.0
     # When True (or when no credentials), use deterministic mock responses
     gemma_mock_mode: bool = True
@@ -74,3 +75,4 @@ class Settings(BaseSettings):
 
 settings = Settings()
    
+

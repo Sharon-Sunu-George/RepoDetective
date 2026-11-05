@@ -1,6 +1,78 @@
 import { useEffect, useState, useRef, useCallback, useMemo } from "react"
-import { Icon, Button, Logo } from "./App"
+import { Icon, Button, Logo, type IconName } from "./App"
 import { fetchRepoBriefing, type RepoBriefingData } from "./repoService"
+
+// Specialized UI Icon helper for retro detective HUD icons with SVG precision
+function HudIcon({
+  name,
+  size = 13,
+}: {
+  name: IconName | "close" | "key" | "chart" | "star" | "clock" | "users" | "copy" | "pulse"
+  size?: number
+}) {
+  if (name === "close") {
+    return (
+      <svg aria-hidden="true" className="icon" fill="none" height={size} viewBox="0 0 24 24" width={size} stroke="currentColor" strokeWidth="2.2">
+        <path d="M18 6L6 18M6 6l12 12" />
+      </svg>
+    )
+  }
+  if (name === "key") {
+    return (
+      <svg aria-hidden="true" className="icon" fill="none" height={size} viewBox="0 0 24 24" width={size} stroke="currentColor" strokeWidth="2">
+        <circle cx="7.5" cy="15.5" r="4.5" />
+        <path d="M11 12l9-9M16 3l4 4M14 7l2 2" />
+      </svg>
+    )
+  }
+  if (name === "chart") {
+    return (
+      <svg aria-hidden="true" className="icon" fill="none" height={size} viewBox="0 0 24 24" width={size} stroke="currentColor" strokeWidth="2">
+        <path d="M3 3v18h18M7 16v-4M12 16V8M17 16v-6" />
+      </svg>
+    )
+  }
+  if (name === "star") {
+    return (
+      <svg aria-hidden="true" className="icon" fill="currentColor" height={size} viewBox="0 0 24 24" width={size}>
+        <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+      </svg>
+    )
+  }
+  if (name === "clock") {
+    return (
+      <svg aria-hidden="true" className="icon" fill="none" height={size} viewBox="0 0 24 24" width={size} stroke="currentColor" strokeWidth="2">
+        <circle cx="12" cy="12" r="10" />
+        <polyline points="12 6 12 12 16 14" />
+      </svg>
+    )
+  }
+  if (name === "users") {
+    return (
+      <svg aria-hidden="true" className="icon" fill="none" height={size} viewBox="0 0 24 24" width={size} stroke="currentColor" strokeWidth="2">
+        <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+        <circle cx="9" cy="7" r="4" />
+        <path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" />
+      </svg>
+    )
+  }
+  if (name === "copy") {
+    return (
+      <svg aria-hidden="true" className="icon" fill="none" height={size} viewBox="0 0 24 24" width={size} stroke="currentColor" strokeWidth="2">
+        <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+      </svg>
+    )
+  }
+  if (name === "pulse") {
+    return (
+      <svg aria-hidden="true" className="icon" fill="none" height={size} viewBox="0 0 24 24" width={size} stroke="currentColor" strokeWidth="2">
+        <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
+      </svg>
+    )
+  }
+  return <Icon name={name as IconName} size={size} />
+}
 
 interface DetectiveOfficeIntroProps {
   owner: string
@@ -82,7 +154,7 @@ function CrtTerminalScreen({
 
       <div className="crt-terminal-content">
         <div className="crt-term-header">
-          <span className="crt-status-dot">ΓùÅ</span>
+          <span className="crt-status-dot">&#9679;</span>
           <span className="crt-term-title">REPO_OS v2.4</span>
           <span className="crt-term-pulse">ONLINE</span>
         </div>
@@ -94,7 +166,7 @@ function CrtTerminalScreen({
 
         <div className="crt-term-meta-row">
           <span className="crt-term-lang">{repoData?.primaryLanguage || "SOURCE"}</span>
-          <span className="crt-term-stars">Γÿà{repoData?.stars?.toLocaleString() || "0"}</span>
+          <span className="crt-term-stars">&#9733; {repoData?.stars?.toLocaleString() || "0"}</span>
           <span className="crt-term-branch">{repoData?.defaultBranch || "main"}</span>
         </div>
 
@@ -110,7 +182,7 @@ function CrtTerminalScreen({
               key={item.name}
               className={`crt-file-line ${idx === (activeFileIndex % 3) ? "crt-file-active" : ""}`}
             >
-              <span className="crt-tree-icon">{item.type === "dir" ? "≡ƒôü" : "≡ƒôä"}</span>
+              <span className="crt-tree-icon">{item.type === "dir" ? "📁" : "📄"}</span>
               <span className="crt-file-name">{item.name}</span>
               <span className="crt-file-role">[{item.role.slice(0, 8)}]</span>
             </div>
@@ -173,7 +245,7 @@ function LeftHudPanel({
 
             <div className="hud-card-header">
               <div className="hud-card-title-group">
-                <span className="hud-card-icon">≡ƒôü</span>
+                <span className="hud-card-icon"><HudIcon name="folder" size={13} /></span>
                 <span className="hud-card-title">CASE FILE</span>
                 <span className="hud-card-slashes">///</span>
               </div>
@@ -184,7 +256,7 @@ function LeftHudPanel({
                 aria-label="Close Case File Panel"
                 type="button"
               >
-                Γ£ò
+                <HudIcon name="close" size={11} />
               </button>
             </div>
 
@@ -199,7 +271,7 @@ function LeftHudPanel({
                     title="Copy repository slug"
                     type="button"
                   >
-                    {copied ? "COPIED" : "≡ƒôï"}
+                    {copied ? "COPIED" : <HudIcon name="copy" size={11} />}
                   </button>
                 </div>
               </div>
@@ -227,7 +299,7 @@ function LeftHudPanel({
 
             <div className="hud-card-header">
               <div className="hud-card-title-group">
-                <span className="hud-card-icon">≡ƒôä</span>
+                <span className="hud-card-icon"><HudIcon name="file" size={13} /></span>
                 <span className="hud-card-title">QUICK READ</span>
                 <span className="hud-card-slashes">///</span>
               </div>
@@ -244,7 +316,7 @@ function LeftHudPanel({
                 title="View full README on GitHub"
                 type="button"
               >
-                VIEW README ΓåÆ
+                VIEW README →
               </button>
             </div>
           </div>
@@ -258,7 +330,7 @@ function LeftHudPanel({
 
             <div className="hud-card-header">
               <div className="hud-card-title-group">
-                <span className="hud-card-icon">≡ƒöæ</span>
+                <span className="hud-card-icon"><HudIcon name="key" size={13} /></span>
                 <span className="hud-card-title">KEY FILES</span>
                 <span className="hud-card-slashes">///</span>
               </div>
@@ -267,7 +339,7 @@ function LeftHudPanel({
             <div className="hud-files-list">
               {data.structureMap?.slice(0, 5).map((file) => (
                 <div key={file.name} className="hud-file-item">
-                  <span className="hud-file-ico">{file.type === "dir" ? "≡ƒôü" : "≡ƒôä"}</span>
+                  <span className="hud-file-ico">{file.type === "dir" ? "📁" : "📄"}</span>
                   <span className="hud-file-txt">{file.name}</span>
                 </div>
               ))}
@@ -312,7 +384,7 @@ function RightHudPanel({
 
             <div className="hud-card-header">
               <div className="hud-card-title-group">
-                <span className="hud-card-icon">≡ƒôè</span>
+                <span className="hud-card-icon"><HudIcon name="chart" size={13} /></span>
                 <span className="hud-card-title">LANGUAGES</span>
                 <span className="hud-card-slashes">///</span>
               </div>
@@ -323,7 +395,7 @@ function RightHudPanel({
                 aria-label="Close Telemetry Panel"
                 type="button"
               >
-                Γ£ò
+                <HudIcon name="close" size={11} />
               </button>
             </div>
 
@@ -389,7 +461,7 @@ function RightHudPanel({
 
             <div className="hud-card-header">
               <div className="hud-card-title-group">
-                <span className="hud-card-icon">≡ƒôê</span>
+                <span className="hud-card-icon"><HudIcon name="pulse" size={13} /></span>
                 <span className="hud-card-title">REPOSITORY STATS</span>
                 <span className="hud-card-slashes">///</span>
               </div>
@@ -397,28 +469,28 @@ function RightHudPanel({
 
             <div className="hud-stats-grid">
               <div className="hud-stat-cell">
-                <span className="hud-stat-icon stat-icon-gold">Γÿà</span>
+                <span className="hud-stat-icon stat-icon-gold"><HudIcon name="star" size={13} /></span>
                 <div className="hud-stat-info">
                   <span className="hud-stat-val">{formatNumber(data.stars)}</span>
                   <span className="hud-stat-lbl">Stars</span>
                 </div>
               </div>
               <div className="hud-stat-cell">
-                <span className="hud-stat-icon">ΓÅ▒</span>
+                <span className="hud-stat-icon"><HudIcon name="clock" size={13} /></span>
                 <div className="hud-stat-info">
                   <span className="hud-stat-val">{data.openIssues}</span>
                   <span className="hud-stat-lbl">Open Issues</span>
                 </div>
               </div>
               <div className="hud-stat-cell">
-                <span className="hud-stat-icon">≡ƒì┤</span>
+                <span className="hud-stat-icon"><HudIcon name="branch" size={13} /></span>
                 <div className="hud-stat-info">
                   <span className="hud-stat-val">{formatNumber(data.forks)}</span>
                   <span className="hud-stat-lbl">Forks</span>
                 </div>
               </div>
               <div className="hud-stat-cell">
-                <span className="hud-stat-icon">≡ƒæÑ</span>
+                <span className="hud-stat-icon"><HudIcon name="users" size={13} /></span>
                 <div className="hud-stat-info">
                   <span className="hud-stat-val">{data.contributorsCount}</span>
                   <span className="hud-stat-lbl">Contributors</span>
@@ -436,7 +508,7 @@ function RightHudPanel({
 
             <div className="hud-card-header">
               <div className="hud-card-title-group">
-                <span className="hud-card-icon">≡ƒòÆ</span>
+                <span className="hud-card-icon"><HudIcon name="clock" size={13} /></span>
                 <span className="hud-card-title">RECENT ACTIVITY</span>
                 <span className="hud-card-slashes">///</span>
               </div>
@@ -675,9 +747,9 @@ export function DetectiveOfficeIntro({
           aria-expanded={false}
           type="button"
         >
-          <span className="hud-tab-icon">≡ƒôü</span>
+          <span className="hud-tab-icon"><HudIcon name="folder" size={12} /></span>
           <span className="hud-tab-label">CASE FILE</span>
-          <span className="hud-tab-arrow">Γû╢</span>
+          <span className="hud-tab-arrow">&#9654;</span>
         </button>
       )}
 
@@ -689,8 +761,8 @@ export function DetectiveOfficeIntro({
           aria-expanded={false}
           type="button"
         >
-          <span className="hud-tab-arrow">ΓùÇ</span>
-          <span className="hud-tab-icon">≡ƒôè</span>
+          <span className="hud-tab-arrow">&#9664;</span>
+          <span className="hud-tab-icon"><HudIcon name="chart" size={12} /></span>
           <span className="hud-tab-label">INTEL</span>
         </button>
       )}
@@ -789,7 +861,7 @@ export function DetectiveOfficeIntro({
                         {loading ? (
                           <div className="rpg-loading-state">
                             <p className="rpg-p">
-                              ΓÇ£Examining case manifests for <b>{owner}/{repo}</b>. Gathering initial intelΓÇªΓÇ¥
+                              “Examining case manifests for <b>{owner}/{repo}</b>. Gathering initial intel…”
                             </p>
                             <div className="loading-radar-dots">
                               <span className="dot dot-1" />
@@ -800,7 +872,7 @@ export function DetectiveOfficeIntro({
                         ) : error ? (
                           <div className="rpg-error-state">
                             <p className="rpg-p text-coral">
-                              ΓÇ£Case file access blocked. {error} Let's try another approach.ΓÇ¥
+                              “Case file access blocked. {error} Let's try another approach.”
                             </p>
                             <div className="error-actions-row" onClick={(e) => e.stopPropagation()}>
                               <Button className="button--primary btn-sm" onClick={() => loadRepoData(owner, repo)}>
@@ -822,7 +894,7 @@ export function DetectiveOfficeIntro({
                             <p className="rpg-p">
                               <span className="rpg-typed-text">{currentScreen.text.slice(0, charCount)}</span>
                               <span className="rpg-untyped-text" aria-hidden="true">{currentScreen.text.slice(charCount)}</span>
-                              {isTyping && <span className="rpg-typewriter-cursor">Γûî</span>}
+                              {isTyping && <span className="rpg-typewriter-cursor">▌</span>}
                             </p>
                           </div>
                         )}
@@ -848,7 +920,7 @@ export function DetectiveOfficeIntro({
                               </Button>
                             ) : (
                               <Button className="button--secondary rpg-continue-btn" onClick={handleDialogueClick}>
-                                {isTyping ? "REVEAL ALL" : "CONTINUE"} <span className="rpg-cyan-diamond">ΓÖª</span>
+                                {isTyping ? "REVEAL ALL" : "CONTINUE"} <span className="rpg-cyan-diamond">&#9670;</span>
                               </Button>
                             )}
                           </div>
